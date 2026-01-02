@@ -1,0 +1,8 @@
+{
+  "name": "NovaFlow Node Studio",
+  "description": "A sophisticated node-based creative canvas with integrated Gemini AI for intelligent content generation and workflow automation.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
