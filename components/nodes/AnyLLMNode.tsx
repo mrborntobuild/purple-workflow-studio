@@ -5,11 +5,40 @@ import { Play } from 'lucide-react';
 interface AnyLLMNodeProps {
   content: string;
   status?: string;
+  mediaInputCount?: number; // Number of dynamic media input ports
   onUpdate: (data: any) => void;
   onRun?: () => void;
 }
 
-export const AnyLLMNode: React.FC<AnyLLMNodeProps> = ({ content, status, onUpdate, onRun }) => {
+export const AnyLLMNode: React.FC<AnyLLMNodeProps> = ({ 
+  content, 
+  status, 
+  mediaInputCount = 0,
+  onUpdate, 
+  onRun 
+}) => {
+  const handleAddMediaInput = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newCount = (mediaInputCount || 0) + 1;
+    onUpdate({ 
+      panelSettings: { 
+        mediaInputCount: newCount 
+      } 
+    });
+  };
+
+  const handleRemoveMediaInput = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (mediaInputCount > 0) {
+      const newCount = mediaInputCount - 1;
+      onUpdate({ 
+        panelSettings: { 
+          mediaInputCount: newCount 
+        } 
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4 min-h-[400px]">
       <textarea 
@@ -20,9 +49,22 @@ export const AnyLLMNode: React.FC<AnyLLMNodeProps> = ({ content, status, onUpdat
       />
       
       <div className="flex items-center justify-between mt-auto">
-        <button className="flex items-center gap-2 text-[12px] font-medium text-gray-500 hover:text-white transition-colors">
-          <span className="text-lg">+</span> Add another image input
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleAddMediaInput}
+            className="flex items-center gap-2 text-[12px] font-medium text-gray-500 hover:text-white transition-colors"
+          >
+            <span className="text-lg">+</span> Add another image input
+          </button>
+          {mediaInputCount > 0 && (
+            <button 
+              onClick={handleRemoveMediaInput}
+              className="flex items-center gap-2 text-[12px] font-medium text-gray-500 hover:text-red-400 transition-colors"
+            >
+              <span className="text-lg">−</span> Remove image input
+            </button>
+          )}
+        </div>
         
         <button 
           onClick={(e) => { e.stopPropagation(); onRun?.(); }}

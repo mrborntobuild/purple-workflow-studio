@@ -8,6 +8,14 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        proxy: {
+          '/api/webhook': {
+            target: 'https://buildhouse.app.n8n.cloud',
+            changeOrigin: true,
+            secure: true,
+            rewrite: (path) => path.replace(/^\/api\/webhook/, '/webhook'),
+          },
+        },
       },
       plugins: [react()],
       define: {

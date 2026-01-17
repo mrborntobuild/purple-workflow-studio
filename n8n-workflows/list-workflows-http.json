@@ -1,0 +1,149 @@
+{
+  "name": "List Workflows API (HTTP)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "workflows",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-list",
+      "name": "Webhook - List Workflows",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "list-workflows"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse query parameters\nconst query = $input.item.json.query || {};\nconst limit = query.limit ? parseInt(query.limit) : null;\nconst offset = query.offset ? parseInt(query.offset) : 0;\nconst sortBy = query.sortBy || 'created_at';\nconst order = query.order || 'desc';\n\n// Build Supabase query URL\nlet url = `https://${process.env.SUPABASE_PROJECT_ID}.supabase.co/rest/v1/workflows?select=*`;\n\nif (limit) {\n  url += `&limit=${limit}`;\n}\nif (offset > 0) {\n  url += `&offset=${offset}`;\n}\nurl += `&order=${sortBy}.${order}`;\n\nreturn {\n  json: {\n    url,\n    limit,\n    offset,\n    sortBy,\n    order\n  }\n};"
+      },
+      "id": "parse-query",
+      "name": "Parse Query Params",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_ANON_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "count=exact"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "http-list",
+      "name": "HTTP Request - List",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 300],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "// Transform workflows array and get total count\nconst workflows = $input.first().json || [];\nconst headers = $input.first().headers || {};\nconst total = parseInt(headers['content-range']?.split('/')[1]) || workflows.length;\n\n// Transform each workflow to match API response format\nconst transformedWorkflows = workflows.map(workflow => ({\n  id: workflow.id,\n  title: workflow.title,\n  nodes: workflow.nodes,\n  edges: workflow.edges,\n  viewState: workflow.view_state,\n  createdAt: workflow.created_at,\n  updatedAt: workflow.updated_at\n}));\n\nreturn {\n  json: {\n    workflows: transformedWorkflows,\n    total: total\n  }\n};"
+      },
+      "id": "transform",
+      "name": "Transform Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-list",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Webhook - List Workflows": {
+      "main": [
+        [
+          {
+            "node": "Parse Query Params",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Query Params": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request - List": {
+      "main": [
+        [
+          {
+            "node": "Transform Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}
+

@@ -16,7 +16,6 @@ export const generateAIContent = async (prompt: string): Promise<string> => {
     });
     return response.text || "No content generated.";
   } catch (error) {
-    console.error("Gemini Error:", error);
     throw error;
   }
 };
@@ -50,7 +49,6 @@ export const generateAIImage = async (prompt: string): Promise<string> => {
     }
     throw new Error("No image generated");
   } catch (error) {
-    console.error("Gemini Image Error:", error);
     throw error;
   }
 };

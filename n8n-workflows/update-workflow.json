@@ -1,0 +1,200 @@
+{
+  "name": "Update Workflow API",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "PUT",
+        "path": "workflows/:id",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-update",
+      "name": "Webhook - Update Workflow",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "update-workflow"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-id",
+              "leftValue": "={{ $json.params.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-id-exists",
+      "name": "IF - Check ID",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "table": {
+          "__rl": true,
+          "value": "workflows",
+          "mode": "list"
+        },
+        "updateKey": {
+          "__rl": true,
+          "value": "id",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.params.id }}",
+            "title": "={{ $json.body.title }}",
+            "nodes": "={{ $json.body.nodes }}",
+            "edges": "={{ $json.body.edges }}",
+            "view_state": "={{ $json.body.viewState }}"
+          }
+        },
+        "options": {
+          "returnFields": "*"
+        }
+      },
+      "id": "supabase-update",
+      "name": "Supabase - Update Workflow",
+      "type": "@n8n/n8n-nodes-langchain.supabase",
+      "typeVersion": 1,
+      "position": [650, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "table": {
+          "__rl": true,
+          "value": "workflows",
+          "mode": "list"
+        },
+        "id": "={{ $json.params.id }}",
+        "options": {
+          "returnFields": "*"
+        }
+      },
+      "id": "supabase-get",
+      "name": "Supabase - Get Workflow",
+      "type": "@n8n/n8n-nodes-langchain.supabase",
+      "typeVersion": 1,
+      "position": [850, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"workflow\": { \"id\": $json.id, \"title\": $json.title, \"nodes\": $json.nodes, \"edges\": $json.edges, \"viewState\": $json.view_state, \"createdAt\": $json.created_at, \"updatedAt\": $json.updated_at } } }}",
+        "options": {}
+      },
+      "id": "respond-update",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 400,
+        "responseBody": "={{ { \"error\": \"Workflow ID is required\" } }}",
+        "options": {}
+      },
+      "id": "respond-error",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 400]
+    }
+  ],
+  "connections": {
+    "Webhook - Update Workflow": {
+      "main": [
+        [
+          {
+            "node": "IF - Check ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Check ID": {
+      "main": [
+        [
+          {
+            "node": "Supabase - Update Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase - Update Workflow": {
+      "main": [
+        [
+          {
+            "node": "Supabase - Get Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase - Get Workflow": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}
+

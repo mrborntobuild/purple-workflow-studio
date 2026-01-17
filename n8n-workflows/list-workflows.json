@@ -1,0 +1,177 @@
+{
+  "name": "List Workflows API",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "workflows",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-list",
+      "name": "Webhook - List Workflows",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "list-workflows"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse query parameters\nconst query = $input.item.json.query || {};\nconst limit = query.limit ? parseInt(query.limit) : null;\nconst offset = query.offset ? parseInt(query.offset) : 0;\nconst sortBy = query.sortBy || 'created_at';\nconst order = query.order || 'desc';\n\nreturn {\n  json: {\n    limit,\n    offset,\n    sortBy,\n    order\n  }\n};"
+      },
+      "id": "parse-query",
+      "name": "Parse Query Params",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "list",
+        "table": {
+          "__rl": true,
+          "value": "workflows",
+          "mode": "list"
+        },
+        "options": {
+          "limit": "={{ $json.limit }}",
+          "offset": "={{ $json.offset }}",
+          "sort": {
+            "field": "={{ $json.sortBy }}",
+            "order": "={{ $json.order }}"
+          },
+          "returnFields": "*"
+        }
+      },
+      "id": "supabase-list",
+      "name": "Supabase - List Workflows",
+      "type": "@n8n/n8n-nodes-langchain.supabase",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "list",
+        "table": {
+          "__rl": true,
+          "value": "workflows",
+          "mode": "list"
+        },
+        "options": {
+          "returnFields": "id"
+        }
+      },
+      "id": "supabase-count",
+      "name": "Supabase - Count Total",
+      "type": "@n8n/n8n-nodes-langchain.supabase",
+      "typeVersion": 1,
+      "position": [650, 500],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Transform workflows array and get total count\nconst workflows = $input.first().json || [];\nconst total = $input.all().length > 1 ? $input.all()[1].json.length : workflows.length;\n\n// Transform each workflow to match API response format\nconst transformedWorkflows = workflows.map(workflow => ({\n  id: workflow.id,\n  title: workflow.title,\n  nodes: workflow.nodes,\n  edges: workflow.edges,\n  viewState: workflow.view_state,\n  createdAt: workflow.created_at,\n  updatedAt: workflow.updated_at\n}));\n\nreturn {\n  json: {\n    workflows: transformedWorkflows,\n    total: total\n  }\n};"
+      },
+      "id": "transform-response",
+      "name": "Transform Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-list",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Webhook - List Workflows": {
+      "main": [
+        [
+          {
+            "node": "Parse Query Params",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Query Params": {
+      "main": [
+        [
+          {
+            "node": "Supabase - List Workflows",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Supabase - Count Total",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase - List Workflows": {
+      "main": [
+        [
+          {
+            "node": "Transform Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase - Count Total": {
+      "main": [
+        [
+          {
+            "node": "Transform Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}
+

@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Image as ImageIcon } from 'lucide-react';
+import { LazyImage } from './LazyImage';
 
 interface PreviewNodeProps {
   imageUrl?: string;
@@ -24,7 +25,7 @@ export const PreviewNode: React.FC<PreviewNodeProps> = ({ imageUrl }) => {
         }}
       >
         {imageUrl ? (
-          <img src={imageUrl} alt="Preview" className="h-full w-full object-contain" />
+          <LazyImage src={imageUrl} alt="Preview" className="h-full w-full object-contain" />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <ImageIcon size={32} className="text-white/5" strokeWidth={1} />

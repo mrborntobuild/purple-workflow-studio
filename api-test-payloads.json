@@ -1,0 +1,548 @@
+{
+  "description": "Test payloads for Workflow Management APIs",
+  "baseUrl": "http://localhost:3002/api/workflows",
+  
+  "1_create_workflow": {
+    "method": "POST",
+    "endpoint": "/api/workflows",
+    "description": "Create a new workflow",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "payload": {
+      "title": "My First Workflow",
+      "nodes": [
+        {
+          "id": "node-1",
+          "type": "text",
+          "position": {
+            "x": 100,
+            "y": 100
+          },
+          "data": {
+            "label": "Text Input",
+            "content": "A beautiful sunset over the ocean",
+            "status": "idle"
+          }
+        },
+        {
+          "id": "node-2",
+          "type": "flux_pro_1_1_ultra",
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "data": {
+            "label": "Flux Pro 1.1 Ultra",
+            "status": "idle",
+            "panelSettings": {
+              "prompt": "A beautiful sunset over the ocean",
+              "aspectRatio": "16:9",
+              "outputFormat": "jpeg",
+              "enableSafetyChecker": true,
+              "safetyTolerance": "2",
+              "negativePrompt": "blurry, low quality",
+              "seedRandom": true
+            }
+          }
+        },
+        {
+          "id": "node-3",
+          "type": "preview",
+          "position": {
+            "x": 700,
+            "y": 100
+          },
+          "data": {
+            "label": "Preview",
+            "status": "idle"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-1",
+          "source": "node-1",
+          "sourcePortIndex": 0,
+          "target": "node-2",
+          "targetPortIndex": 0
+        },
+        {
+          "id": "edge-2",
+          "source": "node-2",
+          "sourcePortIndex": 0,
+          "target": "node-3",
+          "targetPortIndex": 0
+        }
+      ],
+      "viewState": {
+        "x": 0,
+        "y": 0,
+        "zoom": 1
+      }
+    },
+    "expectedResponse": {
+      "workflow": {
+        "id": "uuid-here",
+        "title": "My First Workflow",
+        "nodes": [...],
+        "edges": [...],
+        "viewState": {...},
+        "createdAt": "2024-01-01T00:00:00Z",
+        "updatedAt": "2024-01-01T00:00:00Z"
+      }
+    }
+  },
+
+  "2_create_workflow_minimal": {
+    "method": "POST",
+    "endpoint": "/api/workflows",
+    "description": "Create workflow with minimal required fields",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "payload": {
+      "title": "Minimal Workflow",
+      "nodes": [],
+      "edges": []
+    }
+  },
+
+  "3_create_workflow_with_image_model": {
+    "method": "POST",
+    "endpoint": "/api/workflows",
+    "description": "Create workflow with image generation model",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "payload": {
+      "title": "Image Generation Workflow",
+      "nodes": [
+        {
+          "id": "prompt-1",
+          "type": "prompt",
+          "position": {
+            "x": 50,
+            "y": 50
+          },
+          "data": {
+            "label": "Prompt",
+            "content": "A futuristic cityscape at night",
+            "status": "idle"
+          }
+        },
+        {
+          "id": "model-1",
+          "type": "nano_banana_pro",
+          "position": {
+            "x": 350,
+            "y": 50
+          },
+          "data": {
+            "label": "Nano Banana Pro",
+            "status": "idle",
+            "panelSettings": {
+              "prompt": "A futuristic cityscape at night",
+              "aspectRatio": "16:9",
+              "resolution": "2K",
+              "outputFormat": "png",
+              "seed": "12345",
+              "seedRandom": false,
+              "negativePrompt": "blurry, distorted",
+              "numInferenceSteps": "28"
+            }
+          }
+        },
+        {
+          "id": "export-1",
+          "type": "export",
+          "position": {
+            "x": 650,
+            "y": 50
+          },
+          "data": {
+            "label": "Export",
+            "status": "idle"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1",
+          "source": "prompt-1",
+          "sourcePortIndex": 0,
+          "target": "model-1",
+          "targetPortIndex": 0
+        },
+        {
+          "id": "e2",
+          "source": "model-1",
+          "sourcePortIndex": 0,
+          "target": "export-1",
+          "targetPortIndex": 0
+        }
+      ],
+      "viewState": {
+        "x": -50,
+        "y": -50,
+        "zoom": 0.8
+      }
+    }
+  },
+
+  "4_create_workflow_with_video_model": {
+    "method": "POST",
+    "endpoint": "/api/workflows",
+    "description": "Create workflow with video generation model",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "payload": {
+      "title": "Video Generation Workflow",
+      "nodes": [
+        {
+          "id": "text-1",
+          "type": "text",
+          "position": {
+            "x": 100,
+            "y": 200
+          },
+          "data": {
+            "label": "Video Prompt",
+            "content": "A cat playing piano",
+            "status": "idle"
+          }
+        },
+        {
+          "id": "video-1",
+          "type": "veo_2",
+          "position": {
+            "x": 400,
+            "y": 200
+          },
+          "data": {
+            "label": "Veo 2",
+            "status": "idle",
+            "panelSettings": {
+              "prompt": "A cat playing piano",
+              "duration": "5s",
+              "resolution": "1080p",
+              "aspectRatio": "16:9"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1",
+          "source": "text-1",
+          "sourcePortIndex": 0,
+          "target": "video-1",
+          "targetPortIndex": 0
+        }
+      ],
+      "viewState": {
+        "x": 0,
+        "y": 0,
+        "zoom": 1
+      }
+    }
+  },
+
+  "5_update_workflow": {
+    "method": "PUT",
+    "endpoint": "/api/workflows/{id}",
+    "description": "Update an existing workflow",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "urlParams": {
+      "id": "replace-with-actual-workflow-id"
+    },
+    "payload": {
+      "id": "replace-with-actual-workflow-id",
+      "title": "Updated Workflow Title",
+      "nodes": [
+        {
+          "id": "node-1",
+          "type": "text",
+          "position": {
+            "x": 150,
+            "y": 150
+          },
+          "data": {
+            "label": "Updated Text Input",
+            "content": "Updated content here",
+            "status": "idle"
+          }
+        },
+        {
+          "id": "node-2",
+          "type": "flux_dev",
+          "position": {
+            "x": 450,
+            "y": 150
+          },
+          "data": {
+            "label": "Flux Dev",
+            "status": "idle",
+            "panelSettings": {
+              "prompt": "Updated prompt",
+              "aspectRatio": "1:1",
+              "numInferenceSteps": "30",
+              "guidanceScale": "3.5"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-1",
+          "source": "node-1",
+          "sourcePortIndex": 0,
+          "target": "node-2",
+          "targetPortIndex": 0
+        }
+      ],
+      "viewState": {
+        "x": 100,
+        "y": 100,
+        "zoom": 1.2
+      }
+    },
+    "expectedResponse": {
+      "workflow": {
+        "id": "same-id",
+        "title": "Updated Workflow Title",
+        "nodes": [...],
+        "edges": [...],
+        "viewState": {...},
+        "createdAt": "2024-01-01T00:00:00Z",
+        "updatedAt": "2024-01-02T00:00:00Z"
+      }
+    }
+  },
+
+  "6_get_workflow": {
+    "method": "GET",
+    "endpoint": "/api/workflows/{id}",
+    "description": "Get a workflow by ID",
+    "headers": {},
+    "urlParams": {
+      "id": "replace-with-actual-workflow-id"
+    },
+    "payload": null,
+    "expectedResponse": {
+      "workflow": {
+        "id": "uuid-here",
+        "title": "My First Workflow",
+        "nodes": [...],
+        "edges": [...],
+        "viewState": {...},
+        "createdAt": "2024-01-01T00:00:00Z",
+        "updatedAt": "2024-01-01T00:00:00Z"
+      }
+    }
+  },
+
+  "7_list_workflows": {
+    "method": "GET",
+    "endpoint": "/api/workflows",
+    "description": "List all workflows",
+    "headers": {},
+    "queryParams": {
+      "limit": 10,
+      "offset": 0,
+      "sortBy": "created_at",
+      "order": "desc"
+    },
+    "payload": null,
+    "expectedResponse": {
+      "workflows": [
+        {
+          "id": "uuid-1",
+          "title": "Workflow 1",
+          "nodes": [],
+          "edges": [],
+          "createdAt": "2024-01-01T00:00:00Z",
+          "updatedAt": "2024-01-01T00:00:00Z"
+        },
+        {
+          "id": "uuid-2",
+          "title": "Workflow 2",
+          "nodes": [],
+          "edges": [],
+          "createdAt": "2024-01-02T00:00:00Z",
+          "updatedAt": "2024-01-02T00:00:00Z"
+        }
+      ],
+      "total": 2
+    }
+  },
+
+  "8_list_workflows_with_filters": {
+    "method": "GET",
+    "endpoint": "/api/workflows",
+    "description": "List workflows with pagination and sorting",
+    "headers": {},
+    "queryParams": {
+      "limit": 20,
+      "offset": 10,
+      "sortBy": "updated_at",
+      "order": "asc"
+    },
+    "payload": null
+  },
+
+  "9_delete_workflow": {
+    "method": "DELETE",
+    "endpoint": "/api/workflows/{id}",
+    "description": "Delete a workflow by ID",
+    "headers": {},
+    "urlParams": {
+      "id": "replace-with-actual-workflow-id"
+    },
+    "payload": null,
+    "expectedResponse": {
+      "status": 204,
+      "body": null
+    }
+  },
+
+  "10_complex_workflow": {
+    "method": "POST",
+    "endpoint": "/api/workflows",
+    "description": "Complex workflow with multiple node types",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "payload": {
+      "title": "Complex Image Processing Workflow",
+      "nodes": [
+        {
+          "id": "prompt-1",
+          "type": "prompt",
+          "position": {
+            "x": 50,
+            "y": 100
+          },
+          "data": {
+            "label": "Prompt",
+            "content": "A serene mountain landscape",
+            "status": "idle"
+          }
+        },
+        {
+          "id": "enhancer-1",
+          "type": "prompt_enhancer",
+          "position": {
+            "x": 250,
+            "y": 100
+          },
+          "data": {
+            "label": "Prompt Enhancer",
+            "status": "idle"
+          }
+        },
+        {
+          "id": "model-1",
+          "type": "flux_pro_1_1",
+          "position": {
+            "x": 450,
+            "y": 100
+          },
+          "data": {
+            "label": "Flux Pro 1.1",
+            "status": "idle",
+            "panelSettings": {
+              "prompt": "A serene mountain landscape",
+              "aspectRatio": "16:9",
+              "outputFormat": "jpeg",
+              "enableSafetyChecker": true,
+              "safetyTolerance": "2"
+            }
+          }
+        },
+        {
+          "id": "levels-1",
+          "type": "levels",
+          "position": {
+            "x": 650,
+            "y": 100
+          },
+          "data": {
+            "label": "Levels",
+            "status": "idle"
+          }
+        },
+        {
+          "id": "preview-1",
+          "type": "preview",
+          "position": {
+            "x": 850,
+            "y": 100
+          },
+          "data": {
+            "label": "Preview",
+            "status": "idle"
+          }
+        },
+        {
+          "id": "export-1",
+          "type": "export",
+          "position": {
+            "x": 1050,
+            "y": 100
+          },
+          "data": {
+            "label": "Export",
+            "status": "idle"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1",
+          "source": "prompt-1",
+          "sourcePortIndex": 0,
+          "target": "enhancer-1",
+          "targetPortIndex": 0
+        },
+        {
+          "id": "e2",
+          "source": "enhancer-1",
+          "sourcePortIndex": 0,
+          "target": "model-1",
+          "targetPortIndex": 0
+        },
+        {
+          "id": "e3",
+          "source": "model-1",
+          "sourcePortIndex": 0,
+          "target": "levels-1",
+          "targetPortIndex": 0
+        },
+        {
+          "id": "e4",
+          "source": "levels-1",
+          "sourcePortIndex": 0,
+          "target": "preview-1",
+          "targetPortIndex": 0
+        },
+        {
+          "id": "e5",
+          "source": "preview-1",
+          "sourcePortIndex": 0,
+          "target": "export-1",
+          "targetPortIndex": 0
+        }
+      ],
+      "viewState": {
+        "x": 0,
+        "y": 0,
+        "zoom": 0.75
+      }
+    }
+  }
+}
+

@@ -1,0 +1,98 @@
+{
+  "name": "Create Workflow API",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "workflows",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-create",
+      "name": "Webhook - Create Workflow",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "create-workflow"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": {
+          "__rl": true,
+          "value": "workflows",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "title": "={{ $json.body.title }}",
+            "nodes": "={{ $json.body.nodes }}",
+            "edges": "={{ $json.body.edges }}",
+            "view_state": "={{ $json.body.viewState }}"
+          }
+        },
+        "options": {
+          "returnFields": "*"
+        }
+      },
+      "id": "supabase-insert",
+      "name": "Supabase - Insert Workflow",
+      "type": "@n8n/n8n-nodes-langchain.supabase",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"workflow\": { \"id\": $json.id, \"title\": $json.title, \"nodes\": $json.nodes, \"edges\": $json.edges, \"viewState\": $json.view_state, \"createdAt\": $json.created_at, \"updatedAt\": $json.updated_at } } }}",
+        "options": {}
+      },
+      "id": "respond-create",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook - Create Workflow": {
+      "main": [
+        [
+          {
+            "node": "Supabase - Insert Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase - Insert Workflow": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}
+

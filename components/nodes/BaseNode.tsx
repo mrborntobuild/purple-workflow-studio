@@ -1,12 +1,14 @@
 
 import React from 'react';
 import { MoreHorizontal } from 'lucide-react';
-import { NodeType } from '../../types';
+import { Handle, Position } from '@xyflow/react';
+import { NodeType, DataType } from '../../types';
 
 export interface PortConfig {
   label: string;
   color?: string;
   icon?: React.ReactNode;
+  dataType?: DataType; // Explicit data type override for validation
 }
 
 interface BaseNodeProps {
@@ -20,14 +22,33 @@ interface BaseNodeProps {
   inputs?: PortConfig[];
   outputs?: PortConfig[];
   headerIcon?: React.ReactNode;
+  onOutputPortMouseDown?: (portIndex: number, e: React.MouseEvent) => void;
+  inputPortPosition?: 'top' | 'center' | 'bottom';
+  outputPortPosition?: 'top' | 'center' | 'bottom';
 }
 
-const Port: React.FC<{ config: PortConfig; side: 'left' | 'right' }> = ({ config, side }) => {
+const Port: React.FC<{ 
+  config: PortConfig; 
+  side: 'left' | 'right';
+  nodeId?: string;
+  portIndex?: number;
+  onOutputPortClick?: (portIndex: number, e: React.MouseEvent) => void;
+}> = ({ config, side, nodeId, portIndex, onOutputPortClick }) => {
   const isLeft = side === 'left';
   const color = config.color || '#ffffff';
+  const handleId = isLeft ? `input-${portIndex}` : `output-${portIndex}`;
+
+  const handlePortClick = (e: React.MouseEvent) => {
+    if (!isLeft && onOutputPortClick && portIndex !== undefined) {
+      onOutputPortClick(portIndex, e);
+    }
+  };
 
   return (
-    <div className={`flex items-center ${isLeft ? 'flex-row-reverse' : 'flex-row'}`}>
+    <div 
+      className={`flex items-center ${isLeft ? 'flex-row-reverse' : 'flex-row'} ${!isLeft ? 'cursor-pointer' : ''}`}
+      onClick={handlePortClick}
+    >
       {/* Port Body - The area sticking out of the node */}
       <div className="relative flex h-10 w-6 items-center justify-center overflow-visible pointer-events-auto flex-shrink-0">
         {/* Tab Protrusion - Background piece that connects to the node edge */}
@@ -38,22 +59,32 @@ const Port: React.FC<{ config: PortConfig; side: 'left' | 'right' }> = ({ config
           }}
         />
         
-        {/* Connection Point - A clean, unsquashable geometric circle */}
-        <div 
-          className={`z-10 flex h-[22px] w-[22px] flex-shrink-0 items-center justify-center rounded-full border-[3.5px] bg-[#1a1b1e] transition-transform hover:scale-110 cursor-crosshair aspect-square`}
-          style={{ 
-            borderColor: color,
+        {/* React Flow Handle */}
+        <Handle
+          type={isLeft ? 'target' : 'source'}
+          position={isLeft ? Position.Left : Position.Right}
+          id={handleId}
+          style={{
+            width: '22px',
+            height: '22px',
+            border: `3.5px solid ${color}`,
+            backgroundColor: '#1a1b1e',
+            borderRadius: '50%',
             boxShadow: `0 0 15px ${color}66`,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            left: isLeft ? 'auto' : '0',
+            right: isLeft ? '0' : 'auto',
+            cursor: isLeft ? 'crosshair' : 'grab',
           }}
+          className="!border-[3.5px] hover:scale-110 transition-transform"
         >
-          {config.icon ? (
-            <div className="text-[12px] font-bold text-white leading-none flex items-center justify-center">
+          {config.icon && (
+            <div className="text-[12px] font-bold text-white leading-none flex items-center justify-center w-full h-full">
               {config.icon}
             </div>
-          ) : (
-            <div className="h-1 w-1 rounded-full bg-transparent" />
           )}
-        </div>
+        </Handle>
       </div>
 
       {/* Label - Positioned next to the circle */}
@@ -77,11 +108,36 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
   onMouseDown,
   inputs = [],
   outputs = [],
-  headerIcon
+  headerIcon,
+  onOutputPortMouseDown,
+  inputPortPosition = 'center',
+  outputPortPosition = 'center'
 }) => {
+  // Calculate positioning classes for input ports
+  const getInputPortContainerClass = () => {
+    const baseClass = "absolute right-full flex flex-col gap-4 pointer-events-none z-30";
+    if (inputPortPosition === 'top') {
+      return `${baseClass} top-[56px] items-start`;
+    } else if (inputPortPosition === 'bottom') {
+      return `${baseClass} bottom-0 items-end`;
+    }
+    return `${baseClass} top-[56px] bottom-0 justify-center`; // center (default)
+  };
+
+  // Calculate positioning classes for output ports
+  const getOutputPortContainerClass = () => {
+    const baseClass = "absolute left-full flex flex-col gap-4 pointer-events-none z-30";
+    if (outputPortPosition === 'top') {
+      return `${baseClass} top-[56px] items-start`;
+    } else if (outputPortPosition === 'bottom') {
+      return `${baseClass} bottom-0 items-end`;
+    }
+    return `${baseClass} top-[56px] bottom-0 justify-center`; // center (default)
+  };
+
   return (
     <div 
-      className={`relative flex min-w-[340px] flex-col overflow-visible rounded-2xl border transition-all duration-200 bg-[#1a1b1e] shadow-2xl backdrop-blur-sm group ${
+      className={`relative flex w-[340px] flex-col overflow-visible rounded-2xl border transition-all duration-200 bg-[#1a1b1e] shadow-2xl backdrop-blur-sm group ${
         selected ? 'border-purple-500/60 ring-1 ring-purple-500/20' : 'border-white/5'
       }`}
       onMouseDown={onMouseDown}
@@ -103,16 +159,29 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
 
       {/* Port Containers - POSITIONED COMPLETELY OUTSIDE THE NODE BORDER */}
       {/* Input Ports (Left) */}
-      <div className="absolute right-full top-[56px] bottom-0 flex flex-col justify-center gap-4 pointer-events-none z-30">
+      <div className={getInputPortContainerClass()}>
         {inputs.map((p, i) => (
-          <Port key={`in-${i}`} config={p} side="left" />
+          <Port 
+            key={`in-${i}`} 
+            config={p} 
+            side="left"
+            nodeId={id}
+            portIndex={i}
+          />
         ))}
       </div>
 
-      {/* Output Ports (Right) */}
-      <div className="absolute left-full top-[56px] bottom-0 flex flex-col justify-center gap-4 pointer-events-none z-30">
+      {/* Output Ports (Right) - All are interactive */}
+      <div className={getOutputPortContainerClass()}>
         {outputs.map((p, i) => (
-          <Port key={`out-${i}`} config={p} side="right" />
+          <Port 
+            key={`out-${i}`}
+            config={p} 
+            side="right"
+            nodeId={id}
+            portIndex={i}
+            onOutputPortClick={onOutputPortMouseDown}
+          />
         ))}
       </div>
 

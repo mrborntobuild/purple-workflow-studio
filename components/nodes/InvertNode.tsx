@@ -1,8 +1,36 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { RefreshCcw } from 'lucide-react';
+import { applyInvert } from '../../utils/imageProcessing';
 
-export const InvertNode: React.FC = () => {
+interface InvertNodeProps {
+  inputImageUrl?: string;
+  onUpdate: (data: any) => void;
+}
+
+export const InvertNode: React.FC<InvertNodeProps> = ({ inputImageUrl, onUpdate }) => {
+  const [processedImageUrl, setProcessedImageUrl] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    if (inputImageUrl) {
+      setIsProcessing(true);
+      applyInvert(inputImageUrl)
+        .then((url) => {
+          setProcessedImageUrl(url);
+          onUpdate({ imageUrl: url });
+          setIsProcessing(false);
+        })
+        .catch((err) => {
+          setIsProcessing(false);
+        });
+    } else {
+      setProcessedImageUrl(null);
+    }
+  }, [inputImageUrl, onUpdate]);
+
+  const displayImage = processedImageUrl || inputImageUrl;
+
   return (
     <div className="flex flex-col">
       <div 
@@ -19,9 +47,25 @@ export const InvertNode: React.FC = () => {
           backgroundPosition: '0 0, 0 12px, 12px -12px, -12px 0px'
         }}
       >
-        <div className="flex h-full w-full items-center justify-center bg-white/5">
-           <RefreshCcw size={48} className="text-white/[0.02]" strokeWidth={1} />
-        </div>
+        {displayImage ? (
+          <>
+            <img 
+              src={displayImage} 
+              alt="Invert preview" 
+              className="h-full w-full object-contain"
+              style={{ opacity: isProcessing ? 0.6 : 1 }}
+            />
+            {isProcessing && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                <span className="text-[11px] text-gray-400">Processing...</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-white/5">
+            <RefreshCcw size={48} className="text-white/[0.02]" strokeWidth={1} />
+          </div>
+        )}
       </div>
     </div>
   );

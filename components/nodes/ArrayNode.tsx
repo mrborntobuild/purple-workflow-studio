@@ -1,17 +1,61 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 
-export const ArrayNode: React.FC = () => {
-  const [items, setItems] = useState([{ id: 1, value: "" }]);
+interface ArrayNodeProps {
+  inputText?: string;
+  onUpdate?: (data: any) => void;
+}
+
+export const ArrayNode: React.FC<ArrayNodeProps> = ({ inputText, onUpdate }) => {
+  const [items, setItems] = useState<Array<{ id: number; value: string }>>([{ id: 1, value: "" }]);
+
+  // When inputText changes (from connected node), add it to the array
+  useEffect(() => {
+    if (inputText && inputText.trim() !== '') {
+      setItems(prevItems => {
+        // Check if this text is already in the array
+        const exists = prevItems.some(item => item.value === inputText.trim());
+        if (!exists) {
+          const newItem = { id: Date.now(), value: inputText.trim() };
+          const updatedItems = [...prevItems, newItem];
+          // Update node data
+          if (onUpdate) {
+            onUpdate({ arrayItems: updatedItems.map(item => item.value) });
+          }
+          return updatedItems;
+        }
+        return prevItems;
+      });
+    }
+  }, [inputText, onUpdate]);
 
   const addItem = () => {
-    setItems([...items, { id: Date.now(), value: "" }]);
+    const newItem = { id: Date.now(), value: "" };
+    const updatedItems = [...items, newItem];
+    setItems(updatedItems);
+    if (onUpdate) {
+      onUpdate({ arrayItems: updatedItems.map(item => item.value) });
+    }
   };
 
   const removeItem = (id: number) => {
     if (items.length > 1) {
-      setItems(items.filter(item => item.id !== id));
+      const updatedItems = items.filter(item => item.id !== id);
+      setItems(updatedItems);
+      if (onUpdate) {
+        onUpdate({ arrayItems: updatedItems.map(item => item.value) });
+      }
+    }
+  };
+
+  const updateItem = (id: number, value: string) => {
+    const updatedItems = items.map(item => 
+      item.id === id ? { ...item, value } : item
+    );
+    setItems(updatedItems);
+    if (onUpdate) {
+      onUpdate({ arrayItems: updatedItems.map(item => item.value) });
     }
   };
 
@@ -24,6 +68,8 @@ export const ArrayNode: React.FC = () => {
               <input 
                 type="text" 
                 placeholder="Array item"
+                value={item.value}
+                onChange={(e) => updateItem(item.id, e.target.value)}
                 className="w-full bg-transparent text-[13px] text-gray-300 placeholder-gray-600 outline-none" 
               />
             </div>

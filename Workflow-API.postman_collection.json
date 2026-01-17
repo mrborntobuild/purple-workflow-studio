@@ -1,0 +1,163 @@
+{
+  "info": {
+    "name": "Workflow Management API",
+    "description": "API collection for testing workflow CRUD operations",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3002/api/workflows",
+      "type": "string"
+    },
+    {
+      "key": "workflowId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Create Workflow",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"My First Workflow\",\n  \"nodes\": [\n    {\n      \"id\": \"node-1\",\n      \"type\": \"text\",\n      \"position\": {\n        \"x\": 100,\n        \"y\": 100\n      },\n      \"data\": {\n        \"label\": \"Text Input\",\n        \"content\": \"A beautiful sunset over the ocean\",\n        \"status\": \"idle\"\n      }\n    },\n    {\n      \"id\": \"node-2\",\n      \"type\": \"flux_pro_1_1_ultra\",\n      \"position\": {\n        \"x\": 400,\n        \"y\": 100\n      },\n      \"data\": {\n        \"label\": \"Flux Pro 1.1 Ultra\",\n        \"status\": \"idle\",\n        \"panelSettings\": {\n          \"prompt\": \"A beautiful sunset over the ocean\",\n          \"aspectRatio\": \"16:9\",\n          \"outputFormat\": \"jpeg\",\n          \"enableSafetyChecker\": true,\n          \"safetyTolerance\": \"2\",\n          \"negativePrompt\": \"blurry, low quality\",\n          \"seedRandom\": true\n        }\n      }\n    },\n    {\n      \"id\": \"node-3\",\n      \"type\": \"preview\",\n      \"position\": {\n        \"x\": 700,\n        \"y\": 100\n      },\n      \"data\": {\n        \"label\": \"Preview\",\n        \"status\": \"idle\"\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": \"edge-1\",\n      \"source\": \"node-1\",\n      \"sourcePortIndex\": 0,\n      \"target\": \"node-2\",\n      \"targetPortIndex\": 0\n    },\n    {\n      \"id\": \"edge-2\",\n      \"source\": \"node-2\",\n      \"sourcePortIndex\": 0,\n      \"target\": \"node-3\",\n      \"targetPortIndex\": 0\n    }\n  ],\n  \"viewState\": {\n    \"x\": 0,\n    \"y\": 0,\n    \"zoom\": 1\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}",
+          "host": ["{{baseUrl}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Minimal Workflow",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Minimal Workflow\",\n  \"nodes\": [],\n  \"edges\": []\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}",
+          "host": ["{{baseUrl}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Workflows",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}?limit=10&offset=0&sortBy=created_at&order=desc",
+          "host": ["{{baseUrl}}"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            },
+            {
+              "key": "sortBy",
+              "value": "created_at"
+            },
+            {
+              "key": "order",
+              "value": "desc"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Workflow by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/{{workflowId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["{{workflowId}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update Workflow",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"{{workflowId}}\",\n  \"title\": \"Updated Workflow Title\",\n  \"nodes\": [\n    {\n      \"id\": \"node-1\",\n      \"type\": \"text\",\n      \"position\": {\n        \"x\": 150,\n        \"y\": 150\n      },\n      \"data\": {\n        \"label\": \"Updated Text Input\",\n        \"content\": \"Updated content here\",\n        \"status\": \"idle\"\n      }\n    },\n    {\n      \"id\": \"node-2\",\n      \"type\": \"flux_dev\",\n      \"position\": {\n        \"x\": 450,\n        \"y\": 150\n      },\n      \"data\": {\n        \"label\": \"Flux Dev\",\n        \"status\": \"idle\",\n        \"panelSettings\": {\n          \"prompt\": \"Updated prompt\",\n          \"aspectRatio\": \"1:1\",\n          \"numInferenceSteps\": \"30\",\n          \"guidanceScale\": \"3.5\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": \"edge-1\",\n      \"source\": \"node-1\",\n      \"sourcePortIndex\": 0,\n      \"target\": \"node-2\",\n      \"targetPortIndex\": 0\n    }\n  ],\n  \"viewState\": {\n    \"x\": 100,\n    \"y\": 100,\n    \"zoom\": 1.2\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/{{workflowId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["{{workflowId}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Delete Workflow",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/{{workflowId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["{{workflowId}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Complex Workflow",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Complex Image Processing Workflow\",\n  \"nodes\": [\n    {\n      \"id\": \"prompt-1\",\n      \"type\": \"prompt\",\n      \"position\": {\"x\": 50, \"y\": 100},\n      \"data\": {\n        \"label\": \"Prompt\",\n        \"content\": \"A serene mountain landscape\",\n        \"status\": \"idle\"\n      }\n    },\n    {\n      \"id\": \"enhancer-1\",\n      \"type\": \"prompt_enhancer\",\n      \"position\": {\"x\": 250, \"y\": 100},\n      \"data\": {\n        \"label\": \"Prompt Enhancer\",\n        \"status\": \"idle\"\n      }\n    },\n    {\n      \"id\": \"model-1\",\n      \"type\": \"flux_pro_1_1\",\n      \"position\": {\"x\": 450, \"y\": 100},\n      \"data\": {\n        \"label\": \"Flux Pro 1.1\",\n        \"status\": \"idle\",\n        \"panelSettings\": {\n          \"prompt\": \"A serene mountain landscape\",\n          \"aspectRatio\": \"16:9\",\n          \"outputFormat\": \"jpeg\",\n          \"enableSafetyChecker\": true,\n          \"safetyTolerance\": \"2\"\n        }\n      }\n    },\n    {\n      \"id\": \"levels-1\",\n      \"type\": \"levels\",\n      \"position\": {\"x\": 650, \"y\": 100},\n      \"data\": {\n        \"label\": \"Levels\",\n        \"status\": \"idle\"\n      }\n    },\n    {\n      \"id\": \"preview-1\",\n      \"type\": \"preview\",\n      \"position\": {\"x\": 850, \"y\": 100},\n      \"data\": {\n        \"label\": \"Preview\",\n        \"status\": \"idle\"\n      }\n    },\n    {\n      \"id\": \"export-1\",\n      \"type\": \"export\",\n      \"position\": {\"x\": 1050, \"y\": 100},\n      \"data\": {\n        \"label\": \"Export\",\n        \"status\": \"idle\"\n      }\n    }\n  ],\n  \"edges\": [\n    {\"id\": \"e1\", \"source\": \"prompt-1\", \"sourcePortIndex\": 0, \"target\": \"enhancer-1\", \"targetPortIndex\": 0},\n    {\"id\": \"e2\", \"source\": \"enhancer-1\", \"sourcePortIndex\": 0, \"target\": \"model-1\", \"targetPortIndex\": 0},\n    {\"id\": \"e3\", \"source\": \"model-1\", \"sourcePortIndex\": 0, \"target\": \"levels-1\", \"targetPortIndex\": 0},\n    {\"id\": \"e4\", \"source\": \"levels-1\", \"sourcePortIndex\": 0, \"target\": \"preview-1\", \"targetPortIndex\": 0},\n    {\"id\": \"e5\", \"source\": \"preview-1\", \"sourcePortIndex\": 0, \"target\": \"export-1\", \"targetPortIndex\": 0}\n  ],\n  \"viewState\": {\"x\": 0, \"y\": 0, \"zoom\": 0.75}\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}",
+          "host": ["{{baseUrl}}"]
+        }
+      },
+      "response": []
+    }
+  ]
+}
+
