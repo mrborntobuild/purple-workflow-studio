@@ -2,8 +2,12 @@
 import { GoogleGenAI } from "@google/genai";
 
 export const generateAIContent = async (prompt: string): Promise<string> => {
+  const apiKey = process.env.API_KEY || '';
+  if (!apiKey) {
+    throw new Error('Gemini API key is not configured. Please set GEMINI_API_KEY environment variable.');
+  }
   // Always initialize GoogleGenAI with { apiKey: process.env.API_KEY } as per guidelines
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -21,7 +25,11 @@ export const generateAIContent = async (prompt: string): Promise<string> => {
 };
 
 export const generateAIImage = async (prompt: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY || '';
+  if (!apiKey) {
+    throw new Error('Gemini API key is not configured. Please set GEMINI_API_KEY environment variable.');
+  }
+  const ai = new GoogleGenAI({ apiKey });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
