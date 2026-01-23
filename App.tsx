@@ -46,7 +46,7 @@ import WorkflowDashboard from './components/WorkflowDashboard';
 import { NODE_PANEL_CONFIG } from './components/nodePanelConfig';
 import { getPortConfigForNode, getEdgeStyleFromPort } from './utils/portUtils';
 import { validatePortConnection, getDataTypeFromPort, findCompatibleInputPortIndex, DataType } from './utils/typeValidation';
-import { debounce } from './utils/debounce';
+import { debounce, DebouncedFunction } from './utils/debounce';
 
 const GOOGLE_LOGO_URL = 'https://vxsjiwlvradiyluppage.supabase.co/storage/v1/object/public/logo-images/google.png';
 const KLING_LOGO_URL = 'https://vxsjiwlvradiyluppage.supabase.co/storage/v1/object/public/logo-images/kling-ai.png';
@@ -1200,6 +1200,20 @@ export default function App() {
   // Track last saved state to prevent unnecessary saves/dirty flags
   const lastSavedStateRef = useRef<string>('');
 
+  // Refs to access current state in stable callbacks (prevents save loop)
+  const canvasNodesRef = useRef<CanvasNode[]>([]);
+  const canvasEdgesRef = useRef<Edge[]>([]);
+  const workflowTitleRef = useRef<string>('Untitled Workflow');
+  const currentWorkflowIdRef = useRef<string | null>(null);
+  const isSavingRef = useRef<boolean>(false);
+  const debouncedAutoSaveRef = useRef<DebouncedFunction<() => Promise<void>> | null>(null);
+
+  // Keep refs in sync with state (for stable callback access)
+  useEffect(() => { canvasNodesRef.current = canvasNodes; }, [canvasNodes]);
+  useEffect(() => { canvasEdgesRef.current = canvasEdges; }, [canvasEdges]);
+  useEffect(() => { workflowTitleRef.current = workflowTitle; }, [workflowTitle]);
+  useEffect(() => { currentWorkflowIdRef.current = currentWorkflowId; }, [currentWorkflowId]);
+
   // Load all workflows
   const loadAllWorkflows = async (showLoading: boolean = true) => {
     try {
@@ -1304,7 +1318,16 @@ export default function App() {
 
   // Save workflow
   const handleSaveWorkflow = async () => {
+    if (isSavingRef.current) {
+      console.log('💾 [App] Save already in progress, skipping');
+      return;
+    }
+
+    // Cancel pending auto-save to prevent duplicate saves
+    debouncedAutoSaveRef.current?.cancel();
+
     try {
+      isSavingRef.current = true;
       console.log('═══════════════════════════════════════════════════');
       console.log('💾 [App] ========== SAVE WORKFLOW START ==========');
       console.log('═══════════════════════════════════════════════════');
@@ -1378,9 +1401,9 @@ export default function App() {
         console.log('🔄 [App] Existing workflow updated, ID:', currentWorkflowId);
       }
       
-      // Update title if it changed
-      if (response.workflow.title) {
-        console.log('📝 [App] Title update:', workflowTitle, '→', response.workflow.title);
+      // Update title only if it actually changed (prevents save loop)
+      if (response.workflow.title && response.workflow.title !== workflowTitleRef.current) {
+        console.log('📝 [App] Title update:', workflowTitleRef.current, '→', response.workflow.title);
         setWorkflowTitle(response.workflow.title);
         setTitle(response.workflow.title);
       }
@@ -1424,6 +1447,7 @@ export default function App() {
       console.error('═══════════════════════════════════════════════════');
       // alert('Failed to save workflow'); // Disabled - errors logged to console
     } finally {
+      isSavingRef.current = false;
       setIsSavingWorkflow(false);
       console.log('💾 [App] Save workflow process completed');
     }
@@ -1448,39 +1472,50 @@ export default function App() {
     }
   };
 
-  // Debounced auto-save
-  const debouncedAutoSave = useMemo(
-    () => debounce(async () => {
-      // Only auto-save if we have an ID (or should we create one? logic below handles creation if ID is null but we probably want to wait for user to save first? 
-      // User said "click new workflow... creates a new workflow".
-      // If we auto-save on a new workflow, it will create it.
-      if (canvasNodes.length > 0 || canvasEdges.length > 0) {
-        await handleSaveWorkflow();
-      }
-    }, 2000),
-    [canvasNodes, canvasEdges, workflowTitle, viewport]
-  );
+  // Stable auto-save function - reads from refs to avoid recreation
+  const performAutoSave = useCallback(async () => {
+    if (isSavingRef.current) return;
+
+    const nodes = canvasNodesRef.current;
+    const edges = canvasEdgesRef.current;
+    if (nodes.length === 0 && edges.length === 0) return;
+
+    const currentState = JSON.stringify({
+      nodes,
+      edges,
+      title: workflowTitleRef.current
+    });
+    if (currentState === lastSavedStateRef.current) return;
+
+    await handleSaveWorkflow();
+  }, []); // Empty deps - reads from refs
+
+  // Create debounced function once on mount
+  useEffect(() => {
+    debouncedAutoSaveRef.current = debounce(performAutoSave, 2000);
+    return () => { debouncedAutoSaveRef.current?.cancel(); };
+  }, [performAutoSave]);
+
+  // Stable trigger function
+  const triggerDebouncedAutoSave = useCallback(() => {
+    debouncedAutoSaveRef.current?.();
+  }, []);
 
   // Auto-save and Dirty Check
   useEffect(() => {
-    // Calculate current state string (excluding viewport to avoid saving on pan/zoom)
     const currentState = JSON.stringify({
       nodes: canvasNodes,
       edges: canvasEdges,
       title: workflowTitle
     });
 
-    // If state hasn't changed from last save (or initial load), do nothing
-    if (currentState === lastSavedStateRef.current) {
-      return;
-    }
+    if (currentState === lastSavedStateRef.current) return;
 
-    // If we are here, state has changed
     if (canvasNodes.length > 0 || canvasEdges.length > 0) {
       setHasUnsavedChanges(true);
-      debouncedAutoSave();
+      triggerDebouncedAutoSave();
     }
-  }, [canvasNodes, canvasEdges, workflowTitle, debouncedAutoSave]);
+  }, [canvasNodes, canvasEdges, workflowTitle, triggerDebouncedAutoSave]);
 
   // Sync selectedNodeData when canvasNodes updates (if it's the selected node)
   useEffect(() => {
