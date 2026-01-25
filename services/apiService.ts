@@ -549,11 +549,28 @@ class ApiService {
 
   // Save a workflow (Create or Update)
   async saveWorkflow(workflow: Workflow): Promise<WorkflowResponse> {
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    console.log('🔵 [apiService.saveWorkflow] Starting save...');
+    console.log('🔵 [apiService.saveWorkflow] Input workflow:', {
+      id: workflow.id,
+      title: workflow.title,
+      nodesCount: workflow.nodes?.length,
+      edgesCount: workflow.edges?.length,
+      hasViewState: !!workflow.viewState
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError) {
+      console.error('🔴 [apiService.saveWorkflow] Auth error:', authError);
+      throw new Error(`Authentication error: ${authError.message}`);
+    }
+
     if (!user) {
+      console.error('🔴 [apiService.saveWorkflow] No user logged in');
       throw new Error('User must be logged in to save workflows');
     }
+
+    console.log('🔵 [apiService.saveWorkflow] User authenticated:', user.id);
 
     // Prepare payload
     // Map internal 'title' to database 'name'
@@ -566,17 +583,99 @@ class ApiService {
       updated_at: new Date().toISOString()
     };
 
+    console.log('🔵 [apiService.saveWorkflow] Payload prepared:', {
+      name: payload.name,
+      nodesCount: payload.nodes?.length,
+      edgesCount: payload.edges?.length,
+      created_by: payload.created_by,
+      updated_at: payload.updated_at
+    });
+
     if (workflow.id) {
-      // Update existing
-      const { data, error } = await supabase
+      // Update existing - don't update created_by on existing workflows
+      const updatePayload = {
+        name: payload.name,
+        nodes: payload.nodes,
+        edges: payload.edges,
+        view_state: payload.view_state,
+        updated_at: payload.updated_at
+      };
+      console.log('🔵 [apiService.saveWorkflow] Updating existing workflow:', workflow.id);
+      console.log('🔵 [apiService.saveWorkflow] Update payload (without created_by):', updatePayload);
+
+      // First, try to update with user ownership check
+      let { data, error } = await supabase
         .from('workflows')
-        .update(payload)
+        .update(updatePayload)
         .eq('id', workflow.id)
+        .eq('created_by', user.id)
         .select()
         .single();
-        
-      if (error) throw error;
-      
+
+      // If no match found, try updating without created_by check (legacy workflows with null created_by)
+      if (error && error.code === 'PGRST116') {
+        console.log('🔵 [apiService.saveWorkflow] No match with user check, trying legacy update...');
+        // Also claim ownership of legacy workflows
+        const legacyUpdatePayload = { ...updatePayload, created_by: user.id };
+        const legacyResult = await supabase
+          .from('workflows')
+          .update(legacyUpdatePayload)
+          .eq('id', workflow.id)
+          .is('created_by', null) // Only update if created_by is null
+          .select()
+          .single();
+
+        data = legacyResult.data;
+        error = legacyResult.error;
+
+        if (!error) {
+          console.log('🟢 [apiService.saveWorkflow] Legacy workflow claimed and updated');
+        }
+      }
+
+      if (error) {
+        console.error('🔴 [apiService.saveWorkflow] Supabase UPDATE error:', error);
+        console.error('🔴 [apiService.saveWorkflow] Error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
+
+      if (!data) {
+        console.error('🔴 [apiService.saveWorkflow] UPDATE returned no data - workflow may not exist or user lacks permission');
+        throw new Error('Workflow not found or you do not have permission to update it');
+      }
+
+      console.log('🟢 [apiService.saveWorkflow] UPDATE successful, returned data:', {
+        id: data.id,
+        name: data.name,
+        nodesCount: data.nodes?.length,
+        edgesCount: data.edges?.length
+      });
+
+      // Verify the update by re-fetching
+      console.log('🔵 [apiService.saveWorkflow] Verifying UPDATE by re-fetching...');
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('workflows')
+        .select('*')
+        .eq('id', data.id)
+        .single();
+
+      if (verifyError || !verifyData) {
+        console.error('🔴 [apiService.saveWorkflow] VERIFICATION FAILED - workflow not found after UPDATE!', verifyError);
+        throw new Error('Workflow update verification failed');
+      }
+      console.log('🟢 [apiService.saveWorkflow] Verification successful - workflow confirmed in DB:', {
+        id: verifyData.id,
+        name: verifyData.name,
+        nodesCount: verifyData.nodes?.length,
+        edgesCount: verifyData.edges?.length,
+        updated_at: verifyData.updated_at
+      });
+
       return {
         workflow: {
           id: data.id,
@@ -591,14 +690,50 @@ class ApiService {
       };
     } else {
       // Create new
+      console.log('🔵 [apiService.saveWorkflow] Creating new workflow');
       const { data, error } = await supabase
         .from('workflows')
         .insert(payload)
         .select()
         .single();
-        
-      if (error) throw error;
-      
+
+      if (error) {
+        console.error('🔴 [apiService.saveWorkflow] Supabase INSERT error:', error);
+        console.error('🔴 [apiService.saveWorkflow] Error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
+
+      console.log('🟢 [apiService.saveWorkflow] INSERT successful, returned data:', {
+        id: data.id,
+        name: data.name,
+        nodesCount: data.nodes?.length,
+        edgesCount: data.edges?.length
+      });
+
+      // Verify the save by re-fetching
+      console.log('🔵 [apiService.saveWorkflow] Verifying INSERT by re-fetching...');
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('workflows')
+        .select('*')
+        .eq('id', data.id)
+        .single();
+
+      if (verifyError || !verifyData) {
+        console.error('🔴 [apiService.saveWorkflow] VERIFICATION FAILED - workflow not found after INSERT!', verifyError);
+        throw new Error('Workflow was not saved to database - verification failed');
+      }
+      console.log('🟢 [apiService.saveWorkflow] Verification successful - workflow confirmed in DB:', {
+        id: verifyData.id,
+        name: verifyData.name,
+        nodesCount: verifyData.nodes?.length,
+        edgesCount: verifyData.edges?.length
+      });
+
       return {
         workflow: {
           id: data.id,

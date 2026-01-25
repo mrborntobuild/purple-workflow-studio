@@ -1205,6 +1205,7 @@ export default function App() {
   const canvasEdgesRef = useRef<Edge[]>([]);
   const workflowTitleRef = useRef<string>('Untitled Workflow');
   const currentWorkflowIdRef = useRef<string | null>(null);
+  const viewportRef = useRef<ViewState>({ x: 0, y: 0, zoom: 1 });
   const isSavingRef = useRef<boolean>(false);
   const debouncedAutoSaveRef = useRef<DebouncedFunction<() => Promise<void>> | null>(null);
 
@@ -1213,6 +1214,7 @@ export default function App() {
   useEffect(() => { canvasEdgesRef.current = canvasEdges; }, [canvasEdges]);
   useEffect(() => { workflowTitleRef.current = workflowTitle; }, [workflowTitle]);
   useEffect(() => { currentWorkflowIdRef.current = currentWorkflowId; }, [currentWorkflowId]);
+  useEffect(() => { viewportRef.current = viewport; }, [viewport]);
 
   // Load all workflows
   const loadAllWorkflows = async (showLoading: boolean = true) => {
@@ -1326,21 +1328,28 @@ export default function App() {
     // Cancel pending auto-save to prevent duplicate saves
     debouncedAutoSaveRef.current?.cancel();
 
+    // Read from refs to get the latest values (avoids stale closure issue)
+    const currentNodes = canvasNodesRef.current;
+    const currentEdges = canvasEdgesRef.current;
+    const currentId = currentWorkflowIdRef.current;
+    const currentTitle = workflowTitleRef.current;
+    const currentViewport = viewportRef.current;
+
     try {
       isSavingRef.current = true;
       console.log('═══════════════════════════════════════════════════');
       console.log('💾 [App] ========== SAVE WORKFLOW START ==========');
       console.log('═══════════════════════════════════════════════════');
-      console.log('💾 [App] Current workflow ID:', currentWorkflowId || 'NEW WORKFLOW');
-      console.log('💾 [App] Workflow title:', workflowTitle);
-      console.log('💾 [App] Nodes count:', canvasNodes.length);
-      console.log('💾 [App] Edges count:', canvasEdges.length);
-      console.log('💾 [App] Viewport:', JSON.stringify(viewport));
+      console.log('💾 [App] Current workflow ID:', currentId || 'NEW WORKFLOW');
+      console.log('💾 [App] Workflow title:', currentTitle);
+      console.log('💾 [App] Nodes count:', currentNodes.length);
+      console.log('💾 [App] Edges count:', currentEdges.length);
+      console.log('💾 [App] Viewport:', JSON.stringify(currentViewport));
       
       // Log node details including imageUrl
-      if (canvasNodes.length > 0) {
+      if (currentNodes.length > 0) {
         console.log('💾 [App] Nodes details:');
-        canvasNodes.forEach((node, index) => {
+        currentNodes.forEach((node, index) => {
           const hasImageUrl = !!node.data.imageUrl;
           const imageUrlPreview = node.data.imageUrl 
             ? (node.data.imageUrl.startsWith('http') 
@@ -1358,21 +1367,21 @@ export default function App() {
       }
       
       // Log edge details
-      if (canvasEdges.length > 0) {
+      if (currentEdges.length > 0) {
         console.log('💾 [App] Edges details:');
-        canvasEdges.forEach((edge, index) => {
+        currentEdges.forEach((edge, index) => {
           console.log(`  [${index}] ${edge.source} → ${edge.target} (ports: ${edge.sourcePortIndex} → ${edge.targetPortIndex})`);
         });
       }
       
       setIsSavingWorkflow(true);
-      
+
       const workflow: Workflow = {
-        id: currentWorkflowId || undefined,
-        title: workflowTitle || 'Untitled Workflow',
-        nodes: canvasNodes,
-        edges: canvasEdges,
-        viewState: viewport
+        id: currentId || undefined,
+        title: currentTitle || 'Untitled Workflow',
+        nodes: currentNodes,
+        edges: currentEdges,
+        viewState: currentViewport
       };
       
       console.log('💾 [App] Workflow object created:', {
@@ -1393,12 +1402,12 @@ export default function App() {
       console.log(`✅ [App] Save response received (took ${duration}ms):`, response);
       
       // Update workflow ID if it was a new workflow
-      if (!currentWorkflowId && response.workflow.id) {
+      if (!currentId && response.workflow.id) {
         console.log('🆕 [App] New workflow created!');
         console.log('🆕 [App] Old ID: null → New ID:', response.workflow.id);
         setCurrentWorkflowId(response.workflow.id);
-      } else if (currentWorkflowId) {
-        console.log('🔄 [App] Existing workflow updated, ID:', currentWorkflowId);
+      } else if (currentId) {
+        console.log('🔄 [App] Existing workflow updated, ID:', currentId);
       }
       
       // Update title only if it actually changed (prevents save loop)
@@ -1410,9 +1419,9 @@ export default function App() {
       
       // Update last saved state (excluding viewport)
       lastSavedStateRef.current = JSON.stringify({
-        nodes: canvasNodes,
-        edges: canvasEdges,
-        title: response.workflow.title || workflowTitle
+        nodes: currentNodes,
+        edges: currentEdges,
+        title: response.workflow.title || currentTitle
       });
       
       setHasUnsavedChanges(false);
@@ -1439,13 +1448,17 @@ export default function App() {
       console.error('❌ [App] Error message:', error instanceof Error ? error.message : String(error));
       console.error('❌ [App] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       console.error('❌ [App] Workflow that failed:', {
-        id: currentWorkflowId,
-        title: workflowTitle,
-        nodesCount: canvasNodes.length,
-        edgesCount: canvasEdges.length
+        id: currentId,
+        title: currentTitle,
+        nodesCount: currentNodes.length,
+        edgesCount: currentEdges.length
       });
       console.error('═══════════════════════════════════════════════════');
-      // alert('Failed to save workflow'); // Disabled - errors logged to console
+      // Show error to user
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to save workflow: ${errorMessage}`);
+      // Keep hasUnsavedChanges true so user knows data wasn't saved
+      setHasUnsavedChanges(true);
     } finally {
       isSavingRef.current = false;
       setIsSavingWorkflow(false);

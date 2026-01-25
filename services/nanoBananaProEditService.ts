@@ -22,7 +22,15 @@ export interface NanoBananaProResponse {
 }
 
 class NanoBananaProService {
-  private readonly API_BASE = 'http://localhost:3002';
+  private readonly API_BASE: string;
+
+  constructor() {
+    // In development, use the proxy path to avoid CORS preflight
+    // In production, use the environment variable or fallback
+    this.API_BASE = import.meta.env.DEV
+      ? '/api/webhook'  // Use proxy in development (same-origin, no CORS)
+      : (import.meta.env.VITE_API_BASE_URL || 'https://buildhouse.app.n8n.cloud/webhook');
+  }
 
   /**
    * Get the fal.ai model identifier based on model type

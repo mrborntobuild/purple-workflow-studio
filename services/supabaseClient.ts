@@ -5,7 +5,12 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 if (!supabaseAnonKey) {
   console.error('❌ VITE_SUPABASE_ANON_KEY is missing! Check your Vercel environment variables.');
-  // Still create client with empty key to prevent app crash, but it won't work
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey || 'placeholder-key');
+export const supabase = createClient(supabaseUrl, supabaseAnonKey || 'placeholder-key', {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  }
+});
