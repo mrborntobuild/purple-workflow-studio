@@ -25,11 +25,8 @@ class NanoBananaProService {
   private readonly API_BASE: string;
 
   constructor() {
-    // In development, use the proxy path to avoid CORS preflight
-    // In production, use the environment variable or fallback
-    this.API_BASE = import.meta.env.DEV
-      ? '/api/webhook'  // Use proxy in development (same-origin, no CORS)
-      : (import.meta.env.VITE_API_BASE_URL || 'https://buildhouse.app.n8n.cloud/webhook');
+    // Use /api for both dev and prod - Vercel handles routing to serverless functions
+    this.API_BASE = '/api';
   }
 
   /**
@@ -42,12 +39,11 @@ class NanoBananaProService {
   }
 
   /**
-   * Build payload for local API - flat structure matching your API format
+   * Build payload for Vercel API - flat structure matching the API format
    */
-  private buildPayload(request: NanoBananaProRequest, model: string): Record<string, any> {
+  private buildPayload(request: NanoBananaProRequest): Record<string, any> {
     const payload: Record<string, any> = {
-      model,
-      waitForCompletion: false,
+      nodeType: request.modelType,
       prompt: request.prompt,
       num_images: 1,
     };
@@ -128,10 +124,10 @@ class NanoBananaProService {
     const model = this.getModelIdentifier(request.modelType);
 
     // Build payload
-    const payload = this.buildPayload(request, model);
+    const payload = this.buildPayload(request);
 
-    // Call local API
-    const response = await fetch(`${this.API_BASE}/api/fal/image/generate`, {
+    // Call Vercel API
+    const response = await fetch(`${this.API_BASE}/fal/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -146,26 +142,28 @@ class NanoBananaProService {
 
     const result = await response.json();
 
-    // Handle response format: { success: true, data: { request_id } }
-    if (!result.success || !result.data?.request_id) {
-      throw new Error('Invalid response format from API');
+    // Handle response format: { request_id, status, model }
+    if (!result.request_id) {
+      throw new Error(result.error || 'Invalid response format from API');
     }
 
-    const requestId = result.data.request_id;
-    return { requestId, usedModel: model };
+    return { requestId: result.request_id, usedModel: result.model || model };
   }
 
   /**
-   * Check the status of a generation job - calls local API
+   * Check the status of a generation job - calls Vercel API
    */
   async getStatus(requestId: string, usedModel: string): Promise<NanoBananaProResponse> {
-    // Check status using local API endpoint
-    const statusUrl = `${this.API_BASE}/api/fal/tasks/${requestId}?model=${encodeURIComponent(usedModel)}`;
-    const statusResponse = await fetch(statusUrl, {
-      method: 'GET',
+    // Check status using Vercel API endpoint
+    const statusResponse = await fetch(`${this.API_BASE}/fal/status`, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        request_id: requestId,
+        model: usedModel,
+      }),
     });
 
     if (!statusResponse.ok) {
@@ -175,21 +173,13 @@ class NanoBananaProService {
 
     const result = await statusResponse.json();
 
-    // Handle response format:
-    // Completed: { success: true, data: { request_id, status: "COMPLETED", result: { data: { image: { url: "..." } } } } }
-    // In Progress: { success: true, data: { request_id, status: "IN_PROGRESS" } }
-    
-    if (!result.success || !result.data) {
-      throw new Error('Invalid response format from status API');
-    }
+    const backendStatus = result.status?.toUpperCase() || 'IN_PROGRESS';
 
-    const backendStatus = result.data.status?.toUpperCase() || 'IN_PROGRESS';
-    
     // Map status
     let mappedStatus: 'IN_QUEUE' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
     if (backendStatus === 'FAILED') {
       mappedStatus = 'FAILED';
-    } else if (backendStatus === 'IN_QUEUE') {
+    } else if (backendStatus === 'IN_QUEUE' || backendStatus === 'PENDING') {
       mappedStatus = 'IN_QUEUE';
     } else if (backendStatus === 'COMPLETED') {
       mappedStatus = 'COMPLETED';
@@ -198,21 +188,18 @@ class NanoBananaProService {
     }
 
     let imageUrl: string | undefined;
-    
+
     // Extract image URL if completed
-    // Response format: { success: true, data: { request_id, status: "COMPLETED", result: { data: { images: [{ url: "..." }] } } } }
-    if (mappedStatus === 'COMPLETED' && result.data.result) {
-      // Check the correct path first: result.data.result.data.images[0].url
-      if (result.data.result.data?.images && Array.isArray(result.data.result.data.images) && result.data.result.data.images.length > 0) {
-        imageUrl = result.data.result.data.images[0].url;
-      } 
-      // Fallback to other possible paths
-      else if (result.data.result.images && Array.isArray(result.data.result.images) && result.data.result.images.length > 0) {
-        imageUrl = result.data.result.images[0].url;
-      } else if (result.data.result.image?.url) {
-        imageUrl = result.data.result.image.url;
-      } else if (result.data.result.data?.image?.url) {
-        imageUrl = result.data.result.data.image.url;
+    if (mappedStatus === 'COMPLETED') {
+      // Check output_url first (direct from our API)
+      if (result.output_url) {
+        imageUrl = result.output_url;
+      }
+      // Fallback to raw response paths
+      else if (result.raw?.images?.[0]?.url) {
+        imageUrl = result.raw.images[0].url;
+      } else if (result.raw?.image?.url) {
+        imageUrl = result.raw.image.url;
       }
     }
 
@@ -220,7 +207,7 @@ class NanoBananaProService {
       requestId,
       status: mappedStatus,
       imageUrl,
-      progress: mappedStatus === 'COMPLETED' ? 100 : 0,
+      progress: mappedStatus === 'COMPLETED' ? 100 : (result.progress || 0),
       usedModel,
     };
   }
