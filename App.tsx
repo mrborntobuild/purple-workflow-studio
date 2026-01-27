@@ -47,6 +47,8 @@ import { NODE_PANEL_CONFIG } from './components/nodePanelConfig';
 import { getPortConfigForNode, getEdgeStyleFromPort } from './utils/portUtils';
 import { validatePortConnection, getDataTypeFromPort, findCompatibleInputPortIndex, DataType } from './utils/typeValidation';
 import { debounce, DebouncedFunction } from './utils/debounce';
+import { Tabs, TabsList, TabsTrigger } from './components/ui/tabs';
+import { AppView } from './components/AppView';
 
 const GOOGLE_LOGO_URL = 'https://vxsjiwlvradiyluppage.supabase.co/storage/v1/object/public/logo-images/google.png';
 const KLING_LOGO_URL = 'https://vxsjiwlvradiyluppage.supabase.co/storage/v1/object/public/logo-images/kling-ai.png';
@@ -1221,6 +1223,14 @@ export default function App() {
   const [showTestPage, setShowTestPage] = useState(false);
   const [title, setTitle] = useState('untitled-flow');
   const [searchQuery, setSearchQuery] = useState('');
+  const filteredSidebarItems = useMemo(() => {
+    if (!searchQuery.trim()) return null;
+    const query = searchQuery.toLowerCase();
+    return SIDEBAR_ITEMS.filter(item =>
+      item.label.toLowerCase().includes(query) ||
+      item.id.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedNodeData, setSelectedNodeData] = useState<CanvasNode | null>(null);
   const [nodeUpdateHandler, setNodeUpdateHandler] = useState<((nodeId: string, data: any) => void) | null>(null);
@@ -1235,7 +1245,8 @@ export default function App() {
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [groupNodesHandler, setGroupNodesHandler] = useState<(() => void) | null>(null);
   const [cursorMode, setCursorMode] = useState<'pointer' | 'hand'>('hand');
-  
+  const [editorMode, setEditorMode] = useState<'workflow' | 'app'>('workflow');
+
   // Track last saved state to prevent unnecessary saves/dirty flags
   const lastSavedStateRef = useRef<string>('');
 
@@ -1756,6 +1767,12 @@ export default function App() {
             {isSavingWorkflow && (
               <span className="text-xs text-gray-500">Saving...</span>
             )}
+            <Tabs value={editorMode} onValueChange={(v) => setEditorMode(v as 'workflow' | 'app')}>
+              <TabsList>
+                <TabsTrigger value="workflow">Workflow</TabsTrigger>
+                <TabsTrigger value="app">App</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
           <div className="flex items-center gap-2">
             {selectedNodeIds.length > 1 && (
@@ -1785,8 +1802,10 @@ export default function App() {
           </div>
         </div>
         
+        {editorMode === 'app' && <AppView />}
+
         {/* Sidebar */}
-        <aside className="absolute left-0 top-14 z-20 flex h-[calc(100vh-3.5rem)] w-[280px] flex-col border-r border-white/5 bg-[#0e0e11] py-4">
+        <aside className={`absolute left-0 top-14 z-20 flex h-[calc(100vh-3.5rem)] w-[280px] flex-col border-r border-white/5 bg-[#0e0e11] py-4 ${editorMode === 'app' ? 'hidden' : ''}`}>
           <div className="px-6 mb-6">
             <div className="flex items-center gap-3 mb-8">
               <div className="h-8 w-8 rounded-full bg-purple-600 shadow-[0_0_15px_rgba(147,51,234,0.4)] transition-all hover:scale-110" />
@@ -1806,98 +1825,119 @@ export default function App() {
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 custom-scrollbar">
-            <SidebarCategory title="Quick access">
-              <div className="grid grid-cols-2 gap-2">
-                {SIDEBAR_ITEMS.filter(item => item.category === 'quick-access').map(item => (
-                  <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
-                ))}
+            {filteredSidebarItems ? (
+              <div className="py-2">
+                <div className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-2">
+                  {filteredSidebarItems.length} result{filteredSidebarItems.length !== 1 ? 's' : ''}
+                </div>
+                {filteredSidebarItems.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {filteredSidebarItems.map(item => (
+                      <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500 text-xs">
+                    No tools found for "{searchQuery}"
+                  </div>
+                )}
               </div>
-            </SidebarCategory>
+            ) : (
+              <>
+                <SidebarCategory title="Quick access">
+                  <div className="grid grid-cols-2 gap-2">
+                    {SIDEBAR_ITEMS.filter(item => item.category === 'quick-access').map(item => (
+                      <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
+                    ))}
+                  </div>
+                </SidebarCategory>
 
-            <SidebarCategory title="Toolbox">
-              <div className="flex flex-col gap-6">
-                 <div>
-                   <span className="text-[10px] font-bold text-gray-600 uppercase mb-3 block px-2 tracking-tighter">Editing</span>
-                   <div className="grid grid-cols-2 gap-2">
-                     {SIDEBAR_ITEMS.filter(item => item.category === 'toolbox' && item.subCategory === 'editing').map(item => (
-                       <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
-                     ))}
-                   </div>
-                 </div>
-                 <div>
-                   <span className="text-[10px] font-bold text-gray-600 uppercase mb-3 block px-2 tracking-tighter">Text tools</span>
-                   <div className="grid grid-cols-2 gap-2">
-                     {SIDEBAR_ITEMS.filter(item => item.category === 'toolbox' && item.subCategory === 'text').map(item => (
-                       <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
-                     ))}
-                   </div>
-                 </div>
-                 <div>
-                   <span className="text-[10px] font-bold text-gray-600 uppercase mb-3 block px-2 tracking-tighter">Functions</span>
-                   <div className="grid grid-cols-2 gap-2">
-                     {SIDEBAR_ITEMS.filter(item => item.category === 'toolbox' && item.subCategory === 'functions').map(item => (
-                       <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
-                     ))}
-                   </div>
-                 </div>
-              </div>
-            </SidebarCategory>
+                <SidebarCategory title="Toolbox">
+                  <div className="flex flex-col gap-6">
+                     <div>
+                       <span className="text-[10px] font-bold text-gray-600 uppercase mb-3 block px-2 tracking-tighter">Editing</span>
+                       <div className="grid grid-cols-2 gap-2">
+                         {SIDEBAR_ITEMS.filter(item => item.category === 'toolbox' && item.subCategory === 'editing').map(item => (
+                           <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
+                         ))}
+                       </div>
+                     </div>
+                     <div>
+                       <span className="text-[10px] font-bold text-gray-600 uppercase mb-3 block px-2 tracking-tighter">Text tools</span>
+                       <div className="grid grid-cols-2 gap-2">
+                         {SIDEBAR_ITEMS.filter(item => item.category === 'toolbox' && item.subCategory === 'text').map(item => (
+                           <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
+                         ))}
+                       </div>
+                     </div>
+                     <div>
+                       <span className="text-[10px] font-bold text-gray-600 uppercase mb-3 block px-2 tracking-tighter">Functions</span>
+                       <div className="grid grid-cols-2 gap-2">
+                         {SIDEBAR_ITEMS.filter(item => item.category === 'toolbox' && item.subCategory === 'functions').map(item => (
+                           <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
+                         ))}
+                       </div>
+                     </div>
+                  </div>
+                </SidebarCategory>
 
-            <SidebarCategory title="Image Models">
-              <div className="grid grid-cols-2 gap-2">
-                {SIDEBAR_ITEMS.filter(item => item.category === 'image-models').map(item => (
-                  <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
-                ))}
-              </div>
-            </SidebarCategory>
+                <SidebarCategory title="Image Models">
+                  <div className="grid grid-cols-2 gap-2">
+                    {SIDEBAR_ITEMS.filter(item => item.category === 'image-models').map(item => (
+                      <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
+                    ))}
+                  </div>
+                </SidebarCategory>
 
-            <SidebarCategory title="Video Models">
-              <div className="grid grid-cols-2 gap-2">
-                {SIDEBAR_ITEMS.filter(item => item.category === 'video-models').map(item => (
-                  <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
-                ))}
-              </div>
-            </SidebarCategory>
+                <SidebarCategory title="Video Models">
+                  <div className="grid grid-cols-2 gap-2">
+                    {SIDEBAR_ITEMS.filter(item => item.category === 'video-models').map(item => (
+                      <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
+                    ))}
+                  </div>
+                </SidebarCategory>
 
-            <SidebarCategory title="Lip Sync">
-              <div className="grid grid-cols-2 gap-2">
-                {SIDEBAR_ITEMS.filter(item => item.category === 'lip-sync').map(item => (
-                  <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
-                ))}
-              </div>
-            </SidebarCategory>
+                <SidebarCategory title="Lip Sync">
+                  <div className="grid grid-cols-2 gap-2">
+                    {SIDEBAR_ITEMS.filter(item => item.category === 'lip-sync').map(item => (
+                      <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
+                    ))}
+                  </div>
+                </SidebarCategory>
 
-            <SidebarCategory title="Upscaling & Enhancement">
-              <div className="grid grid-cols-2 gap-2">
-                {SIDEBAR_ITEMS.filter(item => item.category === 'upscaling').map(item => (
-                  <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
-                ))}
-              </div>
-            </SidebarCategory>
+                <SidebarCategory title="Upscaling & Enhancement">
+                  <div className="grid grid-cols-2 gap-2">
+                    {SIDEBAR_ITEMS.filter(item => item.category === 'upscaling').map(item => (
+                      <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
+                    ))}
+                  </div>
+                </SidebarCategory>
 
-            <SidebarCategory title="3D Generation">
-              <div className="grid grid-cols-2 gap-2">
-                {SIDEBAR_ITEMS.filter(item => item.category === '3d-gen').map(item => (
-                  <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
-                ))}
-              </div>
-            </SidebarCategory>
+                <SidebarCategory title="3D Generation">
+                  <div className="grid grid-cols-2 gap-2">
+                    {SIDEBAR_ITEMS.filter(item => item.category === '3d-gen').map(item => (
+                      <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
+                    ))}
+                  </div>
+                </SidebarCategory>
 
-            <SidebarCategory title="Audio / TTS">
-              <div className="grid grid-cols-2 gap-2">
-                {SIDEBAR_ITEMS.filter(item => item.category === 'audio-tts').map(item => (
-                  <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
-                ))}
-              </div>
-            </SidebarCategory>
+                <SidebarCategory title="Audio / TTS">
+                  <div className="grid grid-cols-2 gap-2">
+                    {SIDEBAR_ITEMS.filter(item => item.category === 'audio-tts').map(item => (
+                      <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
+                    ))}
+                  </div>
+                </SidebarCategory>
 
-            <SidebarCategory title="Utility">
-              <div className="grid grid-cols-2 gap-2">
-                {SIDEBAR_ITEMS.filter(item => item.category === 'utility').map(item => (
-                  <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
-                ))}
-              </div>
-            </SidebarCategory>
+                <SidebarCategory title="Utility">
+                  <div className="grid grid-cols-2 gap-2">
+                    {SIDEBAR_ITEMS.filter(item => item.category === 'utility').map(item => (
+                      <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
+                    ))}
+                  </div>
+                </SidebarCategory>
+              </>
+            )}
           </div>
 
           <div className="mt-auto px-6 py-4 flex items-center justify-between border-t border-white/5">
@@ -1910,7 +1950,7 @@ export default function App() {
           </div>
         </aside>
 
-        <header className="absolute left-[280px] top-0 z-10 flex h-16 items-center justify-end px-8 pointer-events-none transition-all right-0">
+        <header className={`absolute left-[280px] top-0 z-10 flex h-16 items-center justify-end px-8 pointer-events-none transition-all right-0 ${editorMode === 'app' ? 'hidden' : ''}`}>
           <div className="flex items-center gap-3 pointer-events-auto">
             <div className="flex items-center gap-2 rounded-xl bg-[#1a1b1e] px-4 py-2 text-xs font-medium text-gray-400">
               <Sparkles size={14} className="text-yellow-500" />
@@ -1926,7 +1966,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className={`relative h-[calc(100vh-3.5rem)] bg-[#050506] overflow-hidden transition-all ml-[280px] mt-14 ${selectedNodeData && NODE_PANEL_CONFIG[selectedNodeData.type] && NODE_PANEL_CONFIG[selectedNodeData.type]!.length > 0 ? 'mr-[360px]' : ''}`}>
+        <main className={`relative h-[calc(100vh-3.5rem)] bg-[#050506] overflow-hidden transition-all ml-[280px] mt-14 ${selectedNodeData && NODE_PANEL_CONFIG[selectedNodeData.type] && NODE_PANEL_CONFIG[selectedNodeData.type]!.length > 0 ? 'mr-[360px]' : ''} ${editorMode === 'app' ? 'hidden' : ''}`}>
           
           {/* Loading Overlay */}
           {isLoadingWorkflows && (
@@ -2013,7 +2053,7 @@ export default function App() {
         </main>
         
         {/* Right Panel */}
-        {selectedNodeData && NODE_PANEL_CONFIG[selectedNodeData.type] && NODE_PANEL_CONFIG[selectedNodeData.type]!.length > 0 && (
+        {editorMode === 'workflow' && selectedNodeData && NODE_PANEL_CONFIG[selectedNodeData.type] && NODE_PANEL_CONFIG[selectedNodeData.type]!.length > 0 && (
           <RightPanel
             selectedNode={selectedNodeData}
             edges={canvasEdges}
