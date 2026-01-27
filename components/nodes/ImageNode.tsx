@@ -10,6 +10,26 @@ export interface ImageNodeRef {
   openModal: () => void;
 }
 
+// Convert aspect ratio string to CSS aspect-ratio value
+const getAspectRatioValue = (ratio?: string): string => {
+  switch (ratio) {
+    case '16:9':
+      return '16/9';
+    case '9:16':
+      return '9/16';
+    case '1:1':
+      return '1/1';
+    case '4:3':
+      return '4/3';
+    case '3:4':
+      return '3/4';
+    case '21:9':
+      return '21/9';
+    default:
+      return '1/1'; // Default to 1:1 for images
+  }
+};
+
 interface ImageNodeProps {
   imageUrl?: string;
   content: string;
@@ -275,26 +295,27 @@ const ImageNodeComponent = forwardRef(
     }
   };
 
-  // Use fal.ai service for both nano_banana_pro and nano_banana_pro_edit, otherwise use onRun callback (which goes through n8n)
+  // All models use onRun callback which goes through apiService
   const handleRun = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (nodeType === 'nano_banana_pro' || nodeType === 'nano_banana_pro_edit') {
-      handleNanoBananaProRun();
-    } else if (onRun) {
+    if (onRun) {
       onRun();
     }
   };
+
+  const aspectRatioValue = getAspectRatioValue(panelSettings?.aspectRatio);
 
   return (
     <>
       <div className="flex flex-col gap-5">
         {/* Large Checkerboard Preview Area */}
-        <div 
-          className={`relative aspect-square w-full rounded-lg overflow-hidden border border-white/5 shadow-inner ${
+        <div
+          className={`relative w-full rounded-lg overflow-hidden border border-white/5 shadow-inner ${
             imageUrl && status !== 'loading' ? 'cursor-pointer' : ''
           }`}
           onClick={handleImageClick}
           style={{
+            aspectRatio: aspectRatioValue,
             backgroundColor: '#1a1b1e',
             backgroundImage: `
               linear-gradient(45deg, #25262b 25%, transparent 25%),
@@ -326,10 +347,10 @@ const ImageNodeComponent = forwardRef(
                   ></div>
                 </div>
                 
-                {progress !== undefined && (
+                {progress !== undefined && progress > 0 ? (
                   <>
                     <div className="w-3/4 h-1 bg-white/10 rounded-full overflow-hidden mb-2">
-                      <div 
+                      <div
                         className="h-full bg-purple-500 transition-all duration-300"
                         style={{ width: `${progress}%` }}
                       />
@@ -338,8 +359,7 @@ const ImageNodeComponent = forwardRef(
                       Generating... {progress}%
                     </span>
                   </>
-                )}
-                {progress === undefined && (
+                ) : (
                   <span className="text-[11px] text-gray-400">Generating...</span>
                 )}
               </div>
@@ -357,10 +377,10 @@ const ImageNodeComponent = forwardRef(
                     style={{ animationDuration: '1s' }}
                   ></div>
                 </div>
-                {progress !== undefined && (
+                {progress !== undefined && progress > 0 ? (
                   <>
                     <div className="w-3/4 h-1 bg-white/10 rounded-full overflow-hidden mb-2">
-                      <div 
+                      <div
                         className="h-full bg-purple-500 transition-all duration-300"
                         style={{ width: `${progress}%` }}
                       />
@@ -369,8 +389,7 @@ const ImageNodeComponent = forwardRef(
                       Generating... {progress}%
                     </span>
                   </>
-                )}
-                {progress === undefined && (
+                ) : (
                   <span className="text-[11px] text-gray-400">Generating...</span>
                 )}
               </div>
@@ -404,7 +423,7 @@ const ImageNodeComponent = forwardRef(
           </button>
         )}
         
-        {(onRun || nodeType === 'nano_banana_pro_edit') && (
+        {onRun && (
           <button 
             onClick={handleRun}
             disabled={status === 'loading'}

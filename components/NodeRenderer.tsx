@@ -50,6 +50,7 @@ import { ArrayNode } from './nodes/ArrayNode';
 import { OptionsNode } from './nodes/OptionsNode';
 import { StickyNoteNode } from './nodes/StickyNoteNode';
 import { ModulePlaceholderNode } from './nodes/ModulePlaceholderNode';
+import { VideoNode } from './nodes/VideoNode';
 import { StyleGuideNode } from './nodes/StyleGuideNode';
 import { GroupNode } from './nodes/GroupNode';
 
@@ -233,7 +234,7 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ node, selected, onDe
           {...commonProps} 
         />;
       
-      // Default placeholder for rest of models
+      // Video Models - use VideoNode with onRun
       case 'veo_2':
       case 'veo_2_i2v':
       case 'veo_3_1':
@@ -252,6 +253,20 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ node, selected, onDe
       case 'pika_2_2':
       case 'ltx_video':
       case 'wan_i2v':
+        return (
+          <VideoNode
+            videoUrl={node.data.videoUrl}
+            content={node.data.content || ''}
+            status={node.data.status}
+            progress={node.data.progress}
+            onUpdate={(data) => onUpdate(node.id, data)}
+            onRun={onRun ? () => onRun(node.id) : undefined}
+            nodeType={node.type}
+            nodeId={node.id}
+            aspectRatio={node.data.panelSettings?.aspectRatio}
+          />
+        );
+
       case 'sad_talker':
         return <ModulePlaceholderNode label={node.data.label} icon={<Zap size={24} />} />;
         
@@ -354,15 +369,17 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ node, selected, onDe
       case 'luma_ray_2':
       case 'luma_ray_2_flash':
         return { headerIcon: <img src={LUMA_LOGO_URL} alt="Luma AI" className="w-4 h-4 object-contain" />, inputs: [{ label: 'PROMPT', color: pink }], outputs: [{ label: 'VIDEO', color: videoRed }] };
-      case 'pika_2_2':
       case 'ltx_video':
         return { headerIcon: <Film size={16} />, inputs: [{ label: 'PROMPT', color: pink }], outputs: [{ label: 'VIDEO', color: videoRed }] };
+      case 'pika_2_2':
+        return { headerIcon: <Film size={16} />, inputs: [{ label: 'IMAGE', color: blue }, { label: 'PROMPT', color: pink }], outputs: [{ label: 'VIDEO', color: videoRed }] };
+      // Kling models - all support image input
       case 'kling_2_6_pro':
       case 'kling_2_1_pro':
       case 'kling_2_0_master':
       case 'kling_1_6_pro':
       case 'kling_1_6_standard':
-        return { headerIcon: <img src={KLING_LOGO_URL} alt="Kling AI" className="w-4 h-4 object-contain" />, inputs: [{ label: 'PROMPT', color: pink }], outputs: [{ label: 'VIDEO', color: videoRed }] };
+        return { headerIcon: <img src={KLING_LOGO_URL} alt="Kling AI" className="w-4 h-4 object-contain" />, inputs: [{ label: 'IMAGE', color: blue }, { label: 'PROMPT', color: pink }], outputs: [{ label: 'VIDEO', color: videoRed }] };
       case 'veo_2':
       case 'veo_3_1':
         return { headerIcon: <img src={GOOGLE_LOGO_URL} alt="Google" className="w-4 h-4 object-contain" />, inputs: [{ label: 'PROMPT', color: pink }], outputs: [{ label: 'VIDEO', color: videoRed }] };

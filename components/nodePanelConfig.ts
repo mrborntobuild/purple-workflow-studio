@@ -89,52 +89,62 @@ export const NODE_PANEL_CONFIG: NodePanelConfig = {
     { type: 'generate_audio', label: 'Generate Audio', required: false, dataType: 'boolean' },
     { type: 'runs', label: 'Runs', required: false, dataType: 'number' },
   ],
-  // Video Models - Kling 2.6 Pro (Image-to-Video)
+  // Video Models - Kling 2.6 Pro (Text-to-Video / Image-to-Video)
   'kling_2_6_pro': [
     { type: 'prompt', label: 'Prompt', required: true, dataType: 'string', placeholder: 'Enter your prompt (supports dialogue/quotes)...' },
-    { type: 'image_url', label: 'Image URL', required: true, dataType: 'string', placeholder: 'Enter image URL (jpg, jpeg, png, webp, gif, avif)...' },
+    { type: 'image_url', label: 'Image URL', required: false, dataType: 'string', placeholder: 'Optional: Enter image URL for image-to-video...' },
     { type: 'duration', label: 'Duration', required: false, dataType: 'string', options: ['Default', '5', '10'] },
+    { type: 'aspect_ratio', label: 'Aspect Ratio', required: false, dataType: 'string', options: ['Default', '16:9', '9:16', '1:1'] },
     { type: 'negative_prompt', label: 'Negative Prompt', required: false, dataType: 'string', placeholder: 'Enter negative prompt...' },
+    { type: 'cfg_scale', label: 'CFG Scale', required: false, dataType: 'number', placeholder: '0.0-1.0 (default 0.5)' },
+    { type: 'seed', label: 'Seed', required: false, dataType: 'string', placeholder: 'Random seed for reproducibility' },
     { type: 'generate_audio', label: 'Generate Audio', required: false, dataType: 'boolean' },
     { type: 'runs', label: 'Runs', required: false, dataType: 'number' },
   ],
   // Video Models - Kling 2.1 Pro (Image-to-Video)
   'kling_2_1_pro': [
     { type: 'prompt', label: 'Prompt', required: true, dataType: 'string', placeholder: 'Enter your prompt...' },
-    { type: 'image_url', label: 'Image URL', required: true, dataType: 'string', placeholder: 'Enter image URL...' },
+    { type: 'image_url', label: 'Image URL', required: false, dataType: 'string', placeholder: 'Optional: Enter image URL for image-to-video...' },
     { type: 'duration', label: 'Duration', required: false, dataType: 'string', options: ['Default', '5', '10'] },
+    { type: 'aspect_ratio', label: 'Aspect Ratio', required: false, dataType: 'string', options: ['Default', '16:9', '9:16', '1:1'] },
     { type: 'negative_prompt', label: 'Negative Prompt', required: false, dataType: 'string', placeholder: 'Enter negative prompt...' },
-    { type: 'cfg_scale', label: 'CFG Scale', required: false, dataType: 'number', placeholder: '0.0-1.0+' },
-    { type: 'tail_image_url', label: 'Tail Image URL', required: false, dataType: 'string', placeholder: 'Enter tail image URL...' },
+    { type: 'cfg_scale', label: 'CFG Scale', required: false, dataType: 'number', placeholder: '0.0-1.0 (default 0.5)' },
+    { type: 'seed', label: 'Seed', required: false, dataType: 'string', placeholder: 'Random seed for reproducibility' },
+    { type: 'tail_image_url', label: 'Tail Image URL', required: false, dataType: 'string', placeholder: 'End frame image URL...' },
     { type: 'runs', label: 'Runs', required: false, dataType: 'number' },
   ],
-  // Video Models - Kling 2.0 Master (Image-to-Video)
+  // Video Models - Kling 2.0 Master (Text-to-Video / Image-to-Video)
   'kling_2_0_master': [
     { type: 'prompt', label: 'Prompt', required: true, dataType: 'string', placeholder: 'Enter your prompt...' },
-    { type: 'image_url', label: 'Image URL', required: true, dataType: 'string', placeholder: 'Enter image URL...' },
+    { type: 'image_url', label: 'Image URL', required: false, dataType: 'string', placeholder: 'Optional: Enter image URL for image-to-video...' },
     { type: 'duration', label: 'Duration', required: false, dataType: 'string', options: ['Default', '5', '10'] },
+    { type: 'aspect_ratio', label: 'Aspect Ratio', required: false, dataType: 'string', options: ['Default', '16:9', '9:16', '1:1'] },
     { type: 'negative_prompt', label: 'Negative Prompt', required: false, dataType: 'string', placeholder: 'Enter negative prompt...' },
-    { type: 'cfg_scale', label: 'CFG Scale', required: false, dataType: 'number', placeholder: '0.0-1.0+' },
+    { type: 'cfg_scale', label: 'CFG Scale', required: false, dataType: 'number', placeholder: '0.0-1.0 (default 0.5)' },
+    { type: 'seed', label: 'Seed', required: false, dataType: 'string', placeholder: 'Random seed for reproducibility' },
     { type: 'runs', label: 'Runs', required: false, dataType: 'number' },
   ],
   // Video Models - Kling 1.6 Pro (Image-to-Video)
   'kling_1_6_pro': [
     { type: 'prompt', label: 'Prompt', required: true, dataType: 'string', placeholder: 'Enter your prompt...' },
-    { type: 'image_url', label: 'Image URL', required: true, dataType: 'string', placeholder: 'Enter image URL...' },
+    { type: 'image_url', label: 'Image URL', required: false, dataType: 'string', placeholder: 'Optional: Enter image URL for image-to-video...' },
     { type: 'duration', label: 'Duration', required: false, dataType: 'string', options: ['Default', '5', '10'] },
     { type: 'aspect_ratio', label: 'Aspect Ratio', required: false, dataType: 'string', options: ['Default', '16:9', '9:16', '1:1'] },
-    { type: 'tail_image_url', label: 'Tail Image URL', required: false, dataType: 'string', placeholder: 'Enter tail image URL...' },
     { type: 'negative_prompt', label: 'Negative Prompt', required: false, dataType: 'string', placeholder: 'Enter negative prompt...' },
-    { type: 'cfg_scale', label: 'CFG Scale', required: false, dataType: 'number', placeholder: '0.0-1.0+' },
+    { type: 'cfg_scale', label: 'CFG Scale', required: false, dataType: 'number', placeholder: '0.0-1.0 (default 0.5)' },
+    { type: 'seed', label: 'Seed', required: false, dataType: 'string', placeholder: 'Random seed for reproducibility' },
+    { type: 'tail_image_url', label: 'Tail Image URL', required: false, dataType: 'string', placeholder: 'End frame image URL...' },
     { type: 'runs', label: 'Runs', required: false, dataType: 'number' },
   ],
-  // Video Models - Kling 1.6 Standard (Image-to-Video)
+  // Video Models - Kling 1.6 Standard (Text-to-Video / Image-to-Video)
   'kling_1_6_standard': [
     { type: 'prompt', label: 'Prompt', required: true, dataType: 'string', placeholder: 'Enter your prompt...' },
-    { type: 'input_image_urls', label: 'Input Image URLs', required: true, dataType: 'string', placeholder: 'Enter image URLs (comma-separated, up to 4 images)...' },
+    { type: 'image_url', label: 'Image URL', required: false, dataType: 'string', placeholder: 'Optional: Enter image URL for image-to-video...' },
     { type: 'duration', label: 'Duration', required: false, dataType: 'string', options: ['Default', '5', '10'] },
     { type: 'aspect_ratio', label: 'Aspect Ratio', required: false, dataType: 'string', options: ['Default', '16:9', '9:16', '1:1'] },
     { type: 'negative_prompt', label: 'Negative Prompt', required: false, dataType: 'string', placeholder: 'Enter negative prompt...' },
+    { type: 'cfg_scale', label: 'CFG Scale', required: false, dataType: 'number', placeholder: '0.0-1.0 (default 0.5)' },
+    { type: 'seed', label: 'Seed', required: false, dataType: 'string', placeholder: 'Random seed for reproducibility' },
     { type: 'runs', label: 'Runs', required: false, dataType: 'number' },
   ],
   // Video Models - Hunyuan Video V1.5 I2V

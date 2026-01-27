@@ -1,0 +1,887 @@
+{
+  "info": {
+    "name": "Purple Workflow Studio - fal.ai API",
+    "_postman_id": "purple-workflow-studio-fal-api",
+    "description": "Complete API collection for Purple Workflow Studio with all fal.ai model endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Utility",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            }
+          }
+        },
+        {
+          "name": "Check Job Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"<from generate response>\",\n  \"model\": \"<from generate response>\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Image Models",
+      "item": [
+        {
+          "name": "Nano Banana Pro",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"nano_banana_pro\",\n  \"prompt\": \"A cute orange cat wearing a tiny top hat\",\n  \"num_images\": 1,\n  \"seed\": 12345,\n  \"aspect_ratio\": \"1:1\",\n  \"output_format\": \"png\",\n  \"resolution\": \"1K\",\n  \"sync_mode\": false,\n  \"enable_web_search\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Nano Banana Pro Edit",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"nano_banana_pro_edit\",\n  \"prompt\": \"Add sunglasses to the cat\",\n  \"image_urls\": [\"https://example.com/cat.jpg\"],\n  \"num_images\": 1,\n  \"seed\": 12345,\n  \"aspect_ratio\": \"auto\",\n  \"output_format\": \"png\",\n  \"resolution\": \"1K\",\n  \"sync_mode\": false,\n  \"enable_web_search\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Flux Pro 1.1 Ultra",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"flux_pro_1_1_ultra\",\n  \"prompt\": \"A hyperrealistic portrait of an astronaut on Mars\",\n  \"aspect_ratio\": \"16:9\",\n  \"num_images\": 1,\n  \"seed\": 12345,\n  \"output_format\": \"jpeg\",\n  \"enable_safety_checker\": true,\n  \"safety_tolerance\": \"2\",\n  \"enhance_prompt\": false,\n  \"sync_mode\": false,\n  \"raw\": false,\n  \"image_url\": null,\n  \"image_prompt_strength\": 0.1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Flux Pro 1.1",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"flux_pro_1_1\",\n  \"prompt\": \"A futuristic cityscape at sunset with flying cars\",\n  \"num_images\": 1,\n  \"image_size\": \"landscape_16_9\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Flux Dev",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"flux_dev\",\n  \"prompt\": \"Abstract digital art with neon colors\",\n  \"num_images\": 1,\n  \"guidance_scale\": 3.5,\n  \"num_inference_steps\": 28\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Flux LoRA",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"flux_lora\",\n  \"prompt\": \"A portrait in anime style\",\n  \"loras\": [\n    {\n      \"path\": \"https://huggingface.co/xxx/lora.safetensors\",\n      \"scale\": 1.0\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Ideogram V3",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"ideogram_v3\",\n  \"prompt\": \"A logo design for a coffee shop called 'Morning Brew'\",\n  \"image_size\": \"square_hd\",\n  \"num_images\": 1,\n  \"seed\": 12345,\n  \"style\": \"DESIGN\",\n  \"style_preset\": null,\n  \"rendering_speed\": \"BALANCED\",\n  \"expand_prompt\": true,\n  \"negative_prompt\": \"\",\n  \"color_palette\": null,\n  \"image_urls\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Ideogram V3 Edit",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"ideogram_v3_edit\",\n  \"prompt\": \"Change the text to say 'Evening Brew'\",\n  \"image_url\": \"https://example.com/logo.png\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Imagen 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"imagen_3\",\n  \"prompt\": \"A photorealistic image of a mountain landscape at golden hour\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Imagen 3 Fast",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"imagen_3_fast\",\n  \"prompt\": \"A simple illustration of a happy dog\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Minimax Image",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"minimax_image\",\n  \"prompt\": \"A detailed fantasy castle on a floating island\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Video Models",
+      "item": [
+        {
+          "name": "Veo 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"veo_2\",\n  \"prompt\": \"A timelapse of clouds moving over a mountain range\",\n  \"aspect_ratio\": \"16:9\",\n  \"duration\": \"8s\",\n  \"resolution\": \"720p\",\n  \"generate_audio\": true,\n  \"negative_prompt\": \"\",\n  \"seed\": 12345,\n  \"auto_fix\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Veo 2 I2V (Image to Video)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"veo_2_i2v\",\n  \"prompt\": \"The clouds begin to move and the sun sets\",\n  \"image_url\": \"https://example.com/mountain.jpg\",\n  \"aspect_ratio\": \"16:9\",\n  \"duration\": \"8s\",\n  \"resolution\": \"720p\",\n  \"generate_audio\": true,\n  \"negative_prompt\": \"\",\n  \"seed\": 12345,\n  \"auto_fix\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Veo 3.1",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"veo_3_1\",\n  \"prompt\": \"A cinematic shot of a car driving through a desert highway\",\n  \"aspect_ratio\": \"16:9\",\n  \"duration\": \"8s\",\n  \"resolution\": \"720p\",\n  \"generate_audio\": true,\n  \"negative_prompt\": \"\",\n  \"seed\": 12345,\n  \"auto_fix\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Kling 2.6 Pro",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"kling_2_6_pro\",\n  \"prompt\": \"A person walking through a busy Tokyo street at night\",\n  \"duration\": 5,\n  \"aspect_ratio\": \"16:9\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Kling 2.1 Pro",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"kling_2_1_pro\",\n  \"prompt\": \"Ocean waves crashing on a rocky shore\",\n  \"duration\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Kling 2.0 Master",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"kling_2_0_master\",\n  \"prompt\": \"A dancer performing ballet in slow motion\",\n  \"duration\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Kling 1.6 Pro",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"kling_1_6_pro\",\n  \"prompt\": \"A butterfly landing on a flower\",\n  \"duration\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Kling 1.6 Standard",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"kling_1_6_standard\",\n  \"prompt\": \"A cat playing with a ball of yarn\",\n  \"duration\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Hunyuan Video V1.5 I2V",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"hunyuan_video_v1_5_i2v\",\n  \"prompt\": \"The character starts to smile and wave\",\n  \"image_url\": \"https://example.com/character.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Hunyuan Video V1.5 T2V",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"hunyuan_video_v1_5_t2v\",\n  \"prompt\": \"A dragon flying over a medieval castle\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Hunyuan Video I2V",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"hunyuan_video_i2v\",\n  \"prompt\": \"Add gentle movement to the scene\",\n  \"image_url\": \"https://example.com/scene.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Luma Ray 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"luma_ray_2\",\n  \"prompt\": \"A spaceship flying through an asteroid field\",\n  \"aspect_ratio\": \"16:9\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Luma Ray 2 Flash",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"luma_ray_2_flash\",\n  \"prompt\": \"A quick animation of a bouncing ball\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Minimax Hailuo",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"minimax_hailuo\",\n  \"prompt\": \"A person reading a book by a window on a rainy day [Pan right]\",\n  \"prompt_optimizer\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Minimax Director",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"minimax_director\",\n  \"prompt\": \"Cinematic shot: camera slowly zooms in on a mysterious door [Push in]\",\n  \"prompt_optimizer\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Pika 2.2",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"pika_2_2\",\n  \"prompt\": \"A cute robot waving hello\",\n  \"image_url\": \"https://example.com/robot.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "LTX Video",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"ltx_video\",\n  \"prompt\": \"A sunrise over a calm lake with birds flying\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Wan I2V",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"wan_i2v\",\n  \"prompt\": \"Add subtle motion to the portrait\",\n  \"image_url\": \"https://example.com/portrait.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Upscaling & Enhancement",
+      "item": [
+        {
+          "name": "Topaz Video",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"topaz_video\",\n  \"video_url\": \"https://example.com/video.mp4\",\n  \"scale\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Creative Upscaler",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"creative_upscaler\",\n  \"image_url\": \"https://example.com/low-res.jpg\",\n  \"scale\": 4,\n  \"creativity\": 0.5,\n  \"model_type\": \"SD_1_5\",\n  \"detail\": 1,\n  \"shape_preservation\": 0.25,\n  \"prompt\": \"\",\n  \"prompt_suffix\": \" high quality, highly detailed, 8K\",\n  \"negative_prompt\": \"blurry, low resolution, artifacts\",\n  \"seed\": 12345,\n  \"guidance_scale\": 7.5,\n  \"num_inference_steps\": 20,\n  \"enable_safety_checks\": true,\n  \"skip_ccsr\": false,\n  \"override_size_limits\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "ESRGAN",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"esrgan\",\n  \"image_url\": \"https://example.com/low-res.jpg\",\n  \"scale\": 4\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Thera",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"thera\",\n  \"image_url\": \"https://example.com/image.jpg\",\n  \"scale\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "DRCT",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"drct\",\n  \"image_url\": \"https://example.com/image.jpg\",\n  \"scale\": 4\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3D Generation",
+      "item": [
+        {
+          "name": "Trellis",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"trellis\",\n  \"image_url\": \"https://example.com/object.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Hunyuan 3D V2",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"hunyuan_3d_v2\",\n  \"prompt\": \"A detailed 3D model of a medieval sword\",\n  \"image_url\": \"https://example.com/sword.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Hunyuan 3D Mini",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"hunyuan_3d_mini\",\n  \"image_url\": \"https://example.com/simple-object.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Hunyuan 3D Turbo",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"hunyuan_3d_turbo\",\n  \"image_url\": \"https://example.com/object.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audio & TTS",
+      "item": [
+        {
+          "name": "Minimax Speech HD",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"minimax_speech_hd\",\n  \"text\": \"Hello, welcome to Purple Workflow Studio!\",\n  \"voice_id\": \"narrator\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Minimax Speech Turbo",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"minimax_speech_turbo\",\n  \"text\": \"This is a quick test of the speech synthesis.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Kokoro TTS",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"kokoro_tts\",\n  \"prompt\": \"The quick brown fox jumps over the lazy dog.\",\n  \"voice\": \"af_bella\",\n  \"speed\": 1.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Dia TTS",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"dia_tts\",\n  \"text\": \"Welcome to our presentation today.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "ElevenLabs TTS",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"elevenlabs_tts\",\n  \"text\": \"This is high-quality text to speech synthesis.\",\n  \"voice_id\": \"21m00Tcm4TlvDq8ikWAM\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "ElevenLabs Turbo",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"elevenlabs_turbo\",\n  \"text\": \"Fast speech generation for quick prototyping.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        },
+        {
+          "name": "MMAudio V2",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"mmaudio_v2\",\n  \"prompt\": \"Ambient forest sounds with birds chirping\",\n  \"video_url\": \"https://example.com/forest-video.mp4\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fal/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fal", "generate"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

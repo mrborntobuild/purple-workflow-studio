@@ -9,11 +9,9 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
         proxy: {
-          '/api/webhook': {
-            target: 'https://buildhouse.app.n8n.cloud',
+          '/api': {
+            target: 'http://localhost:3001',
             changeOrigin: true,
-            secure: true,
-            rewrite: (path) => path.replace(/^\/api\/webhook/, '/webhook'),
           },
         },
       },

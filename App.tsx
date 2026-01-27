@@ -36,7 +36,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { CanvasNode, Edge, ViewState, NodeType, SidebarItem } from './types';
 import { generateAIContent, generateAIImage } from './services/geminiService';
-import { apiService, Workflow } from './services/apiService';
+import { apiService, Workflow, WorkflowFilters } from './services/apiService';
 import { pollingManager } from './utils/pollingManager';
 import { NodeRenderer } from './components/NodeRenderer';
 import { RightPanel } from './components/RightPanel';
@@ -651,14 +651,25 @@ function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerO
   }, [connectingFrom, onNodePickerOpen]);
   
   
-  const isImageModelNode = (nodeType: NodeType): boolean => {
-    const imageModelTypes: NodeType[] = [
-      'nano_banana_pro', 'nano_banana_pro_edit', 'flux_pro_1_1_ultra', 'flux_pro_1_1', 
+  const isGenerativeModelNode = (nodeType: NodeType): boolean => {
+    const generativeModelTypes: NodeType[] = [
+      // Image Models
+      'nano_banana_pro', 'nano_banana_pro_edit', 'flux_pro_1_1_ultra', 'flux_pro_1_1',
       'flux_dev', 'flux_lora', 'ideogram_v3', 'ideogram_v3_edit',
-      'imagen_3', 'imagen_3_fast', 'minimax_image'
+      'imagen_3', 'imagen_3_fast', 'minimax_image',
+      // Video Models
+      'veo_2', 'veo_2_i2v', 'veo_3_1',
+      'kling_2_6_pro', 'kling_2_1_pro', 'kling_2_0_master', 'kling_1_6_pro', 'kling_1_6_standard',
+      'hunyuan_video_v1_5_i2v', 'hunyuan_video_v1_5_t2v', 'hunyuan_video_i2v',
+      'luma_ray_2', 'luma_ray_2_flash',
+      'minimax_hailuo', 'minimax_director',
+      'pika_2_2', 'ltx_video', 'wan_i2v'
     ];
-    return imageModelTypes.includes(nodeType);
+    return generativeModelTypes.includes(nodeType);
   };
+
+  // Keep alias for backwards compatibility
+  const isImageModelNode = isGenerativeModelNode;
   
   const runAINode = useCallback(async (id: string, promptOverride?: string) => {
     console.log('[App] runAINode called for:', id, promptOverride);
@@ -703,22 +714,40 @@ function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerO
           promptText = String(node.data.content).trim();
         }
 
+        // Video I2V models have IMAGE at port 0, PROMPT at port 1
+        const videoI2VModels = [
+          'veo_2_i2v',
+          'kling_2_6_pro', 'kling_2_1_pro', 'kling_2_0_master', 'kling_1_6_pro', 'kling_1_6_standard',
+          'hunyuan_video_v1_5_i2v', 'hunyuan_video_i2v',
+          'wan_i2v', 'pika_2_2', 'minimax_hailuo', 'minimax_director'
+        ];
+        const isVideoI2V = videoI2VModels.includes(node.type);
+
         // Collect images from connected nodes
         for (const edge of inputEdges) {
           const sourceNode = nodes.find((n: typeof nodes[0]) => n.id === edge.source);
 
-          // Check if this edge connects to the PROMPT input (port 0) and has text content
-          if (edge.targetHandle === 'input-0' && sourceNode?.data.content && !promptText) {
-            // Only use connected prompt if we don't have one already
-            promptText = String(sourceNode.data.content).trim();
-          }
-
-          // Collect images from IMAGE ports
-          if (node.type === 'nano_banana_pro' || node.type === 'nano_banana_pro_edit') {
+          if (isVideoI2V) {
+            // For video I2V: port 0 = IMAGE, port 1 = PROMPT
+            if (edge.targetPortIndex === 0 && sourceNode?.data.imageUrl) {
+              inputImageUrls.push(sourceNode.data.imageUrl);
+            }
+            if (edge.targetPortIndex === 1 && sourceNode?.data.content && !promptText) {
+              promptText = String(sourceNode.data.content).trim();
+            }
+          } else if (node.type === 'nano_banana_pro' || node.type === 'nano_banana_pro_edit') {
+            // For nano_banana: port 0 = PROMPT, port 1+ = IMAGE
+            if (edge.targetPortIndex === 0 && sourceNode?.data.content && !promptText) {
+              promptText = String(sourceNode.data.content).trim();
+            }
             if (edge.targetPortIndex > 0 && sourceNode?.data.imageUrl) {
               inputImageUrls.push(sourceNode.data.imageUrl);
             }
           } else {
+            // For other models: port 0 = PROMPT, collect any images
+            if (edge.targetPortIndex === 0 && sourceNode?.data.content && !promptText) {
+              promptText = String(sourceNode.data.content).trim();
+            }
             if (sourceNode?.data.imageUrl) {
               inputImageUrls.push(sourceNode.data.imageUrl);
             }
@@ -754,11 +783,21 @@ function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerO
             });
           },
           onComplete: (status) => {
-            const updateData = {
-              imageUrl: status.result?.imageUrl || null,
+            const updateData: any = {
               status: 'success' as const,
               progress: undefined
             };
+
+            // Handle image, video, and audio results
+            if (status.result?.imageUrl) {
+              updateData.imageUrl = status.result.imageUrl;
+            }
+            if (status.result?.videoUrl) {
+              updateData.videoUrl = status.result.videoUrl;
+            }
+            if (status.result?.audioUrl) {
+              updateData.audioUrl = status.result.audioUrl;
+            }
 
             handleUpdateNode(id, updateData);
           },
@@ -1216,18 +1255,29 @@ export default function App() {
   useEffect(() => { currentWorkflowIdRef.current = currentWorkflowId; }, [currentWorkflowId]);
   useEffect(() => { viewportRef.current = viewport; }, [viewport]);
 
-  // Load all workflows
-  const loadAllWorkflows = async (showLoading: boolean = true) => {
+  // Current filters (stored for re-fetching)
+  const currentFiltersRef = useRef<WorkflowFilters>({});
+
+  // Load all workflows with optional filters
+  const loadAllWorkflows = async (showLoading: boolean = true, filters?: WorkflowFilters) => {
     try {
-      console.log('🔄 Loading workflows...');
+      console.log('🔄 Loading workflows...', filters);
       if (showLoading) setIsLoadingWorkflows(true);
-      
-      console.log('📡 Calling apiService.listWorkflows()');
-      const response = await apiService.listWorkflows();
-      console.log('✅ Response received:', response);
-      
-      setWorkflows(response.workflows || []);
-      console.log('📋 Workflows set:', response.workflows?.length || 0, 'workflows');
+
+      // Use filtered listing if filters provided, otherwise use basic listing
+      if (filters && Object.keys(filters).some(k => filters[k as keyof WorkflowFilters] !== undefined)) {
+        console.log('📡 Calling apiService.listWorkflowsFiltered()');
+        const response = await apiService.listWorkflowsFiltered(filters);
+        console.log('✅ Response received:', response);
+        setWorkflows(response.workflows || []);
+        console.log('📋 Workflows set:', response.workflows?.length || 0, 'workflows');
+      } else {
+        console.log('📡 Calling apiService.listWorkflows()');
+        const response = await apiService.listWorkflows();
+        console.log('✅ Response received:', response);
+        setWorkflows(response.workflows || []);
+        console.log('📋 Workflows set:', response.workflows?.length || 0, 'workflows');
+      }
     } catch (error) {
       console.error('❌ Failed to load workflows:', error);
       // Only clear workflows if we were showing a loading screen (meaning we expected a full refresh)
@@ -1239,6 +1289,13 @@ export default function App() {
       if (showLoading) setIsLoadingWorkflows(false);
     }
   };
+
+  // Handle filter changes from dashboard
+  const handleDashboardFiltersChange = useCallback((filters: WorkflowFilters) => {
+    console.log('🔍 Dashboard filters changed:', filters);
+    currentFiltersRef.current = filters;
+    loadAllWorkflows(false, filters);
+  }, []);
 
   // Load workflows on mount
   useEffect(() => {
@@ -1656,6 +1713,7 @@ export default function App() {
         onOpenWorkflow={handleLoadWorkflow}
         onNewWorkflow={handleNewWorkflow}
         onDeleteWorkflow={handleDeleteWorkflow}
+        onFiltersChange={handleDashboardFiltersChange}
         isLoading={isLoadingWorkflows}
       />
     );

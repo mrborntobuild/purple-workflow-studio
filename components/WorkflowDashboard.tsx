@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
-import { Search, Plus, Trash2, Clock, FileText, LogOut, Grid, List, Folder, Share2, BookOpen, MoreHorizontal, Layout } from 'lucide-react';
-import { Workflow } from '../services/apiService';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Search, Plus, Trash2, Clock, FileText, LogOut, Grid, List, Folder, Share2, BookOpen, MoreHorizontal, Layout, X } from 'lucide-react';
+import { Workflow, WorkflowFilters } from '../services/apiService';
 import { useAuth } from './AuthProvider';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import SortDropdown, { SortOption, SortOrder } from './dashboard/SortDropdown';
+import FilterPanel, { FilterState } from './dashboard/FilterPanel';
 
 interface WorkflowDashboardProps {
   workflows: Workflow[];
   onOpenWorkflow: (id: string, title?: string) => void;
   onNewWorkflow: () => void;
   onDeleteWorkflow: (id: string) => void;
+  onFiltersChange?: (filters: WorkflowFilters) => void;
   isLoading?: boolean;
 }
 
@@ -116,19 +119,103 @@ const TemplateCard = ({ template, onClick, showComingSoon = false }: { template:
 
 type ActiveSection = 'my-workflows' | 'shared-with-me' | 'projects' | 'templates' | 'tutorials';
 
+// LocalStorage keys for persisting preferences
+const STORAGE_KEYS = {
+  sortBy: 'dashboard_sortBy',
+  sortOrder: 'dashboard_sortOrder',
+  filters: 'dashboard_filters',
+};
+
+const getStoredPreferences = () => {
+  try {
+    return {
+      sortBy: (localStorage.getItem(STORAGE_KEYS.sortBy) as SortOption) || 'updated_at',
+      sortOrder: (localStorage.getItem(STORAGE_KEYS.sortOrder) as SortOrder) || 'desc',
+      filters: JSON.parse(localStorage.getItem(STORAGE_KEYS.filters) || '{}'),
+    };
+  } catch {
+    return { sortBy: 'updated_at' as SortOption, sortOrder: 'desc' as SortOrder, filters: {} };
+  }
+};
+
 const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
   workflows,
   onOpenWorkflow,
   onNewWorkflow,
   onDeleteWorkflow,
+  onFiltersChange,
   isLoading = false
 }) => {
+  const stored = getStoredPreferences();
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<ActiveSection>('my-workflows');
+  const [sortBy, setSortBy] = useState<SortOption>(stored.sortBy);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(stored.sortOrder);
+  const [filterState, setFilterState] = useState<FilterState>({
+    dateFrom: stored.filters.dateFrom ? new Date(stored.filters.dateFrom) : null,
+    dateTo: stored.filters.dateTo ? new Date(stored.filters.dateTo) : null,
+    status: stored.filters.status || 'all',
+  });
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
 
+  // Build filters object and notify parent
+  const buildFilters = useCallback((): WorkflowFilters => {
+    return {
+      search: searchQuery || undefined,
+      dateFrom: filterState.dateFrom || undefined,
+      dateTo: filterState.dateTo || undefined,
+      status: filterState.status !== 'all' ? filterState.status : undefined,
+      sortBy,
+      sortOrder,
+    };
+  }, [searchQuery, filterState, sortBy, sortOrder]);
+
+  // Notify parent when filters change
+  useEffect(() => {
+    if (onFiltersChange) {
+      const filters = buildFilters();
+      onFiltersChange(filters);
+    }
+  }, [buildFilters, onFiltersChange]);
+
+  // Persist preferences to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.sortBy, sortBy);
+    localStorage.setItem(STORAGE_KEYS.sortOrder, sortOrder);
+    localStorage.setItem(STORAGE_KEYS.filters, JSON.stringify({
+      dateFrom: filterState.dateFrom?.toISOString(),
+      dateTo: filterState.dateTo?.toISOString(),
+      status: filterState.status,
+    }));
+  }, [sortBy, sortOrder, filterState]);
+
+  // Handle sort change
+  const handleSortChange = (newSortBy: SortOption, newSortOrder: SortOrder) => {
+    setSortBy(newSortBy);
+    setSortOrder(newSortOrder);
+  };
+
+  // Handle filter change
+  const handleFiltersChange = (newFilters: FilterState) => {
+    setFilterState(newFilters);
+  };
+
+  // Clear all filters
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setFilterState({
+      dateFrom: null,
+      dateTo: null,
+      status: 'all',
+    });
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = searchQuery || filterState.dateFrom || filterState.dateTo || filterState.status !== 'all';
+
+  // Client-side filtering as fallback (server-side is preferred via onFiltersChange)
   const filteredWorkflows = workflows.filter(workflow =>
     (workflow.title || 'Untitled').toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -233,7 +320,7 @@ const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
         {/* Top Bar */}
-        <header className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-[#050506]/80 backdrop-blur-xl z-10">
+        <header className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-[#050506]/80 backdrop-blur-xl z-[60]">
           <h1 className="text-xl font-bold text-white">
             {activeSection === 'my-workflows' && 'My Workflows'}
             {activeSection === 'shared-with-me' && 'Shared with me'}
@@ -241,17 +328,44 @@ const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
             {activeSection === 'templates' && 'Templates'}
             {activeSection === 'tutorials' && 'Tutorials'}
           </h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" size={16} />
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search workflows..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-64 bg-[#1a1b1e] border border-white/5 rounded-lg pl-9 pr-4 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
+
+            {/* Filter and Sort controls - only show for my-workflows */}
+            {activeSection === 'my-workflows' && (
+              <>
+                <FilterPanel
+                  filters={filterState}
+                  onFiltersChange={handleFiltersChange}
+                  onClearFilters={handleClearFilters}
+                />
+                <SortDropdown
+                  sortBy={sortBy}
+                  sortOrder={sortOrder}
+                  onSortChange={handleSortChange}
+                />
+              </>
+            )}
+
+            {/* View toggle */}
             {(activeSection === 'my-workflows' || activeSection === 'shared-with-me') && (
               <div className="flex gap-1 bg-[#1a1b1e] p-1 rounded-lg border border-white/5">
                 <button className="p-1.5 bg-white/10 rounded text-white"><Grid size={16} /></button>
@@ -261,7 +375,7 @@ const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar relative z-0">
           {/* My Workflows Section */}
           {activeSection === 'my-workflows' && (
             <>
@@ -301,12 +415,31 @@ const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
                   <div className="flex items-center justify-center py-20">
                     <div className="h-8 w-8 animate-spin rounded-full border-2 border-purple-600 border-t-transparent" />
                   </div>
+                ) : filteredWorkflows.length === 0 && hasActiveFilters ? (
+                  // Empty state when filters return no results
+                  <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-white/5 rounded-3xl bg-[#1a1b1e]/30">
+                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                      <Search className="text-gray-600" size={24} />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-400 mb-2">No matching workflows</h3>
+                    <p className="text-sm text-gray-600 mb-6 max-w-xs text-center">
+                      No workflows match your current filters. Try adjusting your search or filter criteria.
+                    </p>
+                    <button
+                      onClick={handleClearFilters}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-[#1a1b1e] border border-white/10 hover:bg-white/5 text-white rounded-xl font-medium transition-colors"
+                    >
+                      <X size={18} />
+                      Clear Filters
+                    </button>
+                  </div>
                 ) : filteredWorkflows.length === 0 ? (
+                  // Empty state when there are no workflows at all
                   <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-white/5 rounded-3xl bg-[#1a1b1e]/30">
                     <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
                       <FileText className="text-gray-600" size={24} />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-400 mb-2">No workflows found</h3>
+                    <h3 className="text-lg font-medium text-gray-400 mb-2">No workflows yet</h3>
                     <p className="text-sm text-gray-600 mb-6 max-w-xs text-center">
                       Create a new workflow or start from a template to begin building your AI pipeline.
                     </p>

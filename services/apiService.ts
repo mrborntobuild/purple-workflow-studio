@@ -50,6 +50,8 @@ export interface ImageGenerationRequest {
     stylePreset?: string;
     runs?: number;
     imageInputCount?: number;
+    proMode?: boolean;
+    autoFix?: boolean;
   };
   inputImages?: string[];
 }
@@ -59,6 +61,8 @@ export interface StatusResponse {
   jobId: string;
   result?: {
     imageUrl?: string;
+    videoUrl?: string;
+    audioUrl?: string;
     error?: string;
   };
   progress?: number; // 0-100
@@ -84,13 +88,26 @@ export interface WorkflowListResponse {
   total?: number;
 }
 
+export interface WorkflowFilters {
+  search?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  status?: 'draft' | 'published' | 'all';
+  isStarred?: boolean;
+  folderId?: string | null;
+  tagIds?: string[];
+  sortBy?: 'updated_at' | 'created_at' | 'name' | 'node_count';
+  sortOrder?: 'asc' | 'desc';
+}
+
 export interface WorkflowResponse {
   workflow: Workflow;
 }
 
 // Map node types to backend model strings
 const MODEL_MAP: Record<string, string> = {
-  'nano_banana_pro': 'fal-ai/nano-banana-pro/edit',
+  // Image Models
+  'nano_banana_pro': 'fal-ai/nano-banana-pro',
   'nano_banana_pro_edit': 'fal-ai/nano-banana-pro/edit',
   'flux_pro_1_1_ultra': 'fal-ai/flux-pro/v1.1-ultra',
   'flux_pro_1_1': 'fal-ai/flux-pro/v1.1',
@@ -101,6 +118,26 @@ const MODEL_MAP: Record<string, string> = {
   'imagen_3': 'fal-ai/imagen3',
   'imagen_3_fast': 'fal-ai/imagen3/fast',
   'minimax_image': 'fal-ai/minimax/image-01',
+
+  // Video Models
+  'veo_2': 'fal-ai/veo2',
+  'veo_2_i2v': 'fal-ai/veo2/image-to-video',
+  'veo_3_1': 'fal-ai/veo3.1',
+  'kling_2_6_pro': 'fal-ai/kling-video/v2.6/pro/text-to-video',
+  'kling_2_1_pro': 'fal-ai/kling-video/v2.1/pro/image-to-video',
+  'kling_2_0_master': 'fal-ai/kling-video/v2/master/text-to-video',
+  'kling_1_6_pro': 'fal-ai/kling-video/v1.6/pro/image-to-video',
+  'kling_1_6_standard': 'fal-ai/kling-video/v1.6/standard/text-to-video',
+  'hunyuan_video_v1_5_i2v': 'fal-ai/hunyuan-video-v1.5/image-to-video',
+  'hunyuan_video_v1_5_t2v': 'fal-ai/hunyuan-video',
+  'hunyuan_video_i2v': 'fal-ai/hunyuan-video/image-to-video',
+  'luma_ray_2': 'fal-ai/luma-dream-machine/ray-2',
+  'luma_ray_2_flash': 'fal-ai/luma-dream-machine/ray-2-flash',
+  'minimax_hailuo': 'fal-ai/minimax/video-01-live',
+  'minimax_director': 'fal-ai/minimax/video-01-director',
+  'pika_2_2': 'fal-ai/pika/v2.2',
+  'ltx_video': 'fal-ai/ltx-video',
+  'wan_i2v': 'fal-ai/wan/v2.1/image-to-video',
 };
 
 // Transform panel settings to API format (snake_case) with model-specific logic
@@ -213,7 +250,45 @@ function transformPanelSettings(settings: any, nodeType: string): Record<string,
   if (settings.enableWebSearch !== undefined) {
     apiSettings.enable_web_search = settings.enableWebSearch;
   }
-  
+
+  // Video-specific parameters
+  if (settings.duration && settings.duration !== 'Default') {
+    apiSettings.duration = settings.duration;
+  }
+  if (settings.generateAudio !== undefined) {
+    apiSettings.generate_audio = settings.generateAudio;
+  }
+  if (settings.cfgScale !== undefined && settings.cfgScale !== '' && settings.cfgScale !== null) {
+    const cfg = typeof settings.cfgScale === 'string' ? parseFloat(settings.cfgScale) : settings.cfgScale;
+    if (!isNaN(cfg)) {
+      apiSettings.cfg_scale = cfg;
+    }
+  }
+  if (settings.loop !== undefined) {
+    apiSettings.loop = settings.loop;
+  }
+  if (settings.promptOptimizer !== undefined) {
+    apiSettings.prompt_optimizer = settings.promptOptimizer;
+  }
+  if (settings.enhancePrompt !== undefined) {
+    apiSettings.enhance_prompt = settings.enhancePrompt;
+  }
+  if (settings.numFrames !== undefined && settings.numFrames !== '' && settings.numFrames !== null) {
+    const frames = typeof settings.numFrames === 'string' ? parseInt(settings.numFrames) : settings.numFrames;
+    if (!isNaN(frames) && frames > 0) {
+      apiSettings.num_frames = frames;
+    }
+  }
+  if (settings.proMode !== undefined) {
+    apiSettings.pro_mode = settings.proMode;
+  }
+  if (settings.enablePromptExpansion !== undefined) {
+    apiSettings.enable_prompt_expansion = settings.enablePromptExpansion;
+  }
+  if (settings.autoFix !== undefined) {
+    apiSettings.auto_fix = settings.autoFix;
+  }
+
   // Model-specific defaults and requirements based on API documentation
   switch (nodeType) {
     case 'nano_banana_pro':
@@ -285,8 +360,84 @@ function transformPanelSettings(settings: any, nodeType: string): Record<string,
     case 'minimax_image':
       // No additional defaults needed
       break;
+
+    // Video Models
+    case 'veo_2':
+    case 'veo_2_i2v':
+      // Default: aspect_ratio: "16:9", duration: "5s", enhance_prompt: true
+      if (!apiSettings.aspect_ratio) apiSettings.aspect_ratio = '16:9';
+      if (!apiSettings.duration) apiSettings.duration = '5s';
+      if (apiSettings.enhance_prompt === undefined) apiSettings.enhance_prompt = true;
+      break;
+
+    case 'veo_3_1':
+      // Default: aspect_ratio: "16:9", duration: "8s", resolution: "720p", generate_audio: true
+      if (!apiSettings.aspect_ratio) apiSettings.aspect_ratio = '16:9';
+      if (!apiSettings.duration) apiSettings.duration = '8s';
+      if (!apiSettings.resolution) apiSettings.resolution = '720p';
+      if (apiSettings.generate_audio === undefined) apiSettings.generate_audio = true;
+      break;
+
+    case 'kling_2_6_pro':
+      // Default: duration: "5", aspect_ratio: "16:9", cfg_scale: 0.5, generate_audio: true
+      if (!apiSettings.duration) apiSettings.duration = '5';
+      if (!apiSettings.aspect_ratio) apiSettings.aspect_ratio = '16:9';
+      if (apiSettings.cfg_scale === undefined) apiSettings.cfg_scale = 0.5;
+      if (apiSettings.generate_audio === undefined) apiSettings.generate_audio = true;
+      break;
+
+    case 'kling_2_1_pro':
+    case 'kling_2_0_master':
+    case 'kling_1_6_pro':
+    case 'kling_1_6_standard':
+      // Default: duration: "5", aspect_ratio: "16:9", cfg_scale: 0.5
+      if (!apiSettings.duration) apiSettings.duration = '5';
+      if (!apiSettings.aspect_ratio) apiSettings.aspect_ratio = '16:9';
+      if (apiSettings.cfg_scale === undefined) apiSettings.cfg_scale = 0.5;
+      break;
+
+    case 'hunyuan_video_v1_5_t2v':
+      // Default: num_inference_steps: 30, aspect_ratio: "16:9", resolution: "720p"
+      if (!apiSettings.num_inference_steps) apiSettings.num_inference_steps = 30;
+      if (!apiSettings.aspect_ratio) apiSettings.aspect_ratio = '16:9';
+      if (!apiSettings.resolution) apiSettings.resolution = '720p';
+      break;
+
+    case 'hunyuan_video_v1_5_i2v':
+    case 'hunyuan_video_i2v':
+      // Default: num_inference_steps: 28, aspect_ratio: "16:9", resolution: "480p", enable_prompt_expansion: true
+      if (!apiSettings.num_inference_steps) apiSettings.num_inference_steps = 28;
+      if (!apiSettings.aspect_ratio) apiSettings.aspect_ratio = '16:9';
+      if (!apiSettings.resolution) apiSettings.resolution = '480p';
+      if (apiSettings.enable_prompt_expansion === undefined) apiSettings.enable_prompt_expansion = true;
+      break;
+
+    case 'luma_ray_2':
+    case 'luma_ray_2_flash':
+      // Default: aspect_ratio: "16:9", resolution: "540p", duration: "5s"
+      if (!apiSettings.aspect_ratio) apiSettings.aspect_ratio = '16:9';
+      if (!apiSettings.resolution) apiSettings.resolution = '540p';
+      if (!apiSettings.duration) apiSettings.duration = '5s';
+      break;
+
+    case 'minimax_hailuo':
+    case 'minimax_director':
+      // Default: prompt_optimizer: true
+      if (apiSettings.prompt_optimizer === undefined) apiSettings.prompt_optimizer = true;
+      break;
+
+    case 'ltx_video':
+      // Default: num_inference_steps: 30, guidance_scale: 3
+      if (!apiSettings.num_inference_steps) apiSettings.num_inference_steps = 30;
+      if (!apiSettings.guidance_scale) apiSettings.guidance_scale = 3;
+      break;
+
+    case 'pika_2_2':
+    case 'wan_i2v':
+      // No additional defaults needed
+      break;
   }
-  
+
   return apiSettings;
 }
 
@@ -311,109 +462,61 @@ class ApiService {
   private baseUrl: string;
 
   constructor(baseUrl?: string) {
-    // In development, use the proxy path to avoid CORS preflight
-    const devBaseUrl = import.meta.env.DEV 
-      ? '/api/webhook'  // Use proxy in development (same-origin, no CORS)
-      : (import.meta.env.VITE_API_BASE_URL || 'https://buildhouse.app.n8n.cloud/webhook');
-    
-    this.baseUrl = baseUrl || devBaseUrl;
+    // Always use /api for local Vercel serverless functions (same domain, no CORS)
+    this.baseUrl = baseUrl || '/api';
     console.log('🔧 [ApiService] Initialized with baseUrl:', this.baseUrl);
-    console.log('🔧 [ApiService] VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
     console.log('🔧 [ApiService] Development mode:', import.meta.env.DEV);
   }
 
   // Initiate image generation
   async startImageGeneration(request: ImageGenerationRequest): Promise<{ jobId: string; usedModel?: string }> {
     console.log('[ApiService] startImageGeneration', request);
-    const model = MODEL_MAP[request.nodeType];
-    if (!model) {
-      throw new Error(`Unknown model type: ${request.nodeType}`);
-    }
 
     // Transform settings to API format (num_images: 1 is always set here)
     const apiSettings = transformPanelSettings(request.panelSettings, request.nodeType);
 
-    // Build the API request body - ALWAYS include prompt
+    // Build the API request body
     const apiRequestBody: Record<string, any> = {
-      model,
-      waitForCompletion: false,
-      prompt: request.prompt || '', // Always include prompt, even if empty
+      nodeType: request.nodeType,
+      prompt: request.prompt || '',
       ...apiSettings
     };
 
     // Handle input images
-    if (request.nodeType === 'nano_banana_pro') {
-      const hasConnectedImages = request.inputImages && request.inputImages.length > 0;
-      
-      if (hasConnectedImages) {
-        apiRequestBody.model = 'fal-ai/nano-banana-pro/edit';
-        apiRequestBody.image_urls = request.inputImages || [];
-      } else {
-        apiRequestBody.model = 'fal-ai/nano-banana-pro';
-      }
-
-      // Call n8n webhook for nano_banana_pro
-      const response = await fetch('https://buildhouse.app.n8n.cloud/webhook/call-image-model', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(apiRequestBody)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to start generation: ${response.status} ${errorText}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.request_id) {
-        return { jobId: result.request_id, usedModel: apiRequestBody.model };
-      } else if (result.jobId) {
-        return { jobId: result.jobId, usedModel: apiRequestBody.model };
-      } else if (result.success && result.data?.request_id) {
-        return { jobId: result.data.request_id, usedModel: apiRequestBody.model };
-      }
-      
-      throw new Error('No request_id returned from n8n webhook');
-    } else if (request.nodeType === 'nano_banana_pro_edit') {
-      if (!request.inputImages || request.inputImages.length === 0) {
-        throw new Error('Nano Banana Pro Edit requires at least one input image');
-      }
-      
-      apiRequestBody.model = 'fal-ai/nano-banana-pro/edit';
-      apiRequestBody.image_urls = request.inputImages;
-
-      const response = await fetch('https://buildhouse.app.n8n.cloud/webhook/call-image-model', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(apiRequestBody)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to start generation: ${response.status} ${errorText}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.request_id) {
-        return { jobId: result.request_id, usedModel: apiRequestBody.model };
-      } else if (result.jobId) {
-        return { jobId: result.jobId, usedModel: apiRequestBody.model };
-      } else if (result.success && result.data?.request_id) {
-        return { jobId: result.data.request_id, usedModel: apiRequestBody.model };
-      }
-      
-      throw new Error('No request_id returned from n8n webhook');
-    } else if (request.inputImages && request.inputImages.length > 0) {
-      if (request.inputImages.length === 1) {
+    if (request.inputImages && request.inputImages.length > 0) {
+      // nano_banana_pro_edit always needs image_urls as array
+      if (request.nodeType === 'nano_banana_pro_edit' || request.nodeType === 'nano_banana_pro') {
+        apiRequestBody.image_urls = request.inputImages;
+      } else if (request.inputImages.length === 1) {
         apiRequestBody.image_url = request.inputImages[0];
       } else {
         apiRequestBody.image_urls = request.inputImages;
       }
     }
 
-    const response = await fetch(`${this.baseUrl}/api/fal/image/generate`, {
+    // Special handling for models that require images
+    const imageRequiredModels = [
+      'nano_banana_pro_edit',
+      'veo_2_i2v',
+      'kling_2_1_pro',
+      'kling_1_6_pro',
+      'hunyuan_video_v1_5_i2v',
+      'hunyuan_video_i2v',
+      'wan_i2v',
+      'pika_2_2'
+    ];
+    if (imageRequiredModels.includes(request.nodeType) && (!request.inputImages || request.inputImages.length === 0)) {
+      throw new Error(`${request.nodeType} requires at least one input image`);
+    }
+
+    // For nano_banana_pro with images, use the edit variant
+    if (request.nodeType === 'nano_banana_pro' && request.inputImages && request.inputImages.length > 0) {
+      apiRequestBody.nodeType = 'nano_banana_pro_edit';
+    }
+
+    console.log('[ApiService] Calling /api/fal/generate with:', apiRequestBody);
+
+    const response = await fetch(`${this.baseUrl}/fal/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(apiRequestBody)
@@ -425,12 +528,14 @@ class ApiService {
     }
 
     const result = await response.json();
+    console.log('[ApiService] Generate response:', result);
 
-    if (result.success && result.data?.request_id) {
-      return { jobId: result.data.request_id };
+    // Handle response from our Vercel API
+    if (result.request_id) {
+      return { jobId: result.request_id, usedModel: result.model };
     }
-    
-    throw new Error('Invalid response format from API');
+
+    throw new Error(result.error || 'Invalid response format from API');
   }
 
   // Check status of a job
@@ -440,74 +545,97 @@ class ApiService {
       throw new Error(`Unknown model type: ${nodeType}`);
     }
 
-    if (nodeType === 'nano_banana_pro' || nodeType === 'nano_banana_pro_edit') {
-      const response = await fetch('https://buildhouse.app.n8n.cloud/webhook/get-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          request_id: jobId,
-          model: model
-        })
-      });
+    console.log('[ApiService] Checking status:', { jobId, nodeType, model });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to get status: ${response.status} ${errorText}`);
-      }
+    const response = await fetch(`${this.baseUrl}/fal/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        request_id: jobId,
+        model: model
+      })
+    });
 
-      const result = await response.json();
-      
-      let backendStatus = 'processing';
-      
-      if (Array.isArray(result)) {
-        if (result.length > 0 && result[0].images && result[0].images.length > 0) {
-          backendStatus = 'completed';
-        }
-      } else {
-        backendStatus = result.status || (result.data && result.data.status) || 'processing'; 
-      }
-      
-      const mappedStatus = mapBackendStatus(backendStatus);
-      
-      let imageUrl: string | undefined;
-      
-      if (mappedStatus === 'completed') {
-        if (Array.isArray(result) && result.length > 0) {
-          const firstItem = result[0];
-          if (firstItem.images && Array.isArray(firstItem.images) && firstItem.images.length > 0) {
-            imageUrl = firstItem.images[0].url;
-          }
-        }
-        else if (result.image && result.image.url) {
-          imageUrl = result.image.url;
-        } else if (result.result && result.result.image && result.result.image.url) {
-          imageUrl = result.result.image.url;
-        } else if (result.images && Array.isArray(result.images) && result.images.length > 0) {
-          imageUrl = result.images[0].url;
-        } else if (result.data && result.data.result && result.data.result.images && Array.isArray(result.data.result.images) && result.data.result.images.length > 0) {
-          imageUrl = result.data.result.images[0].url;
-        }
-      }
-
-      return {
-        status: mappedStatus,
-        jobId,
-        result: imageUrl ? { imageUrl } : undefined,
-        progress: !Array.isArray(result) ? (result.progress || 0) : 0
-      };
-    }
-
-    const url = `${this.baseUrl}/api/fal/tasks/${jobId}?model=${encodeURIComponent(model)}`;
-
-    const response = await fetch(url);
-    
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to get status: ${response.status} ${errorText}`);
     }
 
     const result = await response.json();
-    
+    console.log('[ApiService] Status response:', result);
+
+    // Map FAL status to our internal status
+    const statusMap: Record<string, 'pending' | 'processing' | 'completed' | 'failed'> = {
+      'PENDING': 'pending',
+      'IN_QUEUE': 'pending',
+      'IN_PROGRESS': 'processing',
+      'COMPLETED': 'completed',
+      'FAILED': 'failed',
+    };
+
+    const mappedStatus = statusMap[result.status] || 'processing';
+
+    // Extract output URL based on result type
+    let imageUrl: string | undefined;
+    let videoUrl: string | undefined;
+    let audioUrl: string | undefined;
+
+    if (mappedStatus === 'completed' && result.output_url) {
+      // Determine type based on URL or model
+      const url = result.output_url;
+      if (url.match(/\.(mp4|webm|mov)($|\?)/i)) {
+        videoUrl = url;
+      } else if (url.match(/\.(mp3|wav|ogg)($|\?)/i)) {
+        audioUrl = url;
+      } else {
+        imageUrl = url;
+      }
+    }
+
+    // Also check raw result for nested data
+    if (mappedStatus === 'completed' && result.raw) {
+      const raw = result.raw;
+      if (!imageUrl && raw.images?.[0]?.url) {
+        imageUrl = raw.images[0].url;
+      }
+      if (!videoUrl && raw.video?.url) {
+        videoUrl = raw.video.url;
+      }
+      if (!audioUrl && raw.audio?.url) {
+        audioUrl = raw.audio.url;
+      }
+    }
+
+    return {
+      status: mappedStatus,
+      jobId,
+      result: imageUrl || videoUrl || audioUrl ? {
+        imageUrl,
+        videoUrl,
+        audioUrl
+      } : undefined,
+      progress: result.progress || 0
+    };
+  }
+
+  // Legacy method - keeping for compatibility but now unused
+  async _getJobStatusLegacy(jobId: string, nodeType: string, usedModel?: string): Promise<StatusResponse> {
+    const model = usedModel || MODEL_MAP[nodeType];
+    if (!model) {
+      throw new Error(`Unknown model type: ${nodeType}`);
+    }
+
+    const url = `${this.baseUrl}/fal/tasks/${jobId}?model=${encodeURIComponent(model)}`;
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to get status: ${response.status} ${errorText}`);
+    }
+
+    const result = await response.json();
+
     if (!result.success || !result.data) {
       throw new Error('Invalid response format from status API');
     }
@@ -516,7 +644,7 @@ class ApiService {
     const mappedStatus = mapBackendStatus(backendStatus);
 
     let imageUrl: string | undefined;
-    
+
     if (mappedStatus === 'completed') {
       if (result.data.result) {
         if (result.data.result.images && Array.isArray(result.data.result.images) && result.data.result.images.length > 0) {
@@ -689,8 +817,51 @@ class ApiService {
         }
       };
     } else {
-      // Create new
+      // Create new - first check if a workflow with this name already exists for this user
       console.log('🔵 [apiService.saveWorkflow] Creating new workflow');
+
+      // Check for existing workflow with same name by this user
+      const { data: existingWorkflow } = await supabase
+        .from('workflows')
+        .select('id')
+        .eq('name', payload.name)
+        .eq('created_by', user.id)
+        .single();
+
+      if (existingWorkflow) {
+        // Workflow with this name already exists - update it instead
+        console.log('🔵 [apiService.saveWorkflow] Found existing workflow with same name, updating instead:', existingWorkflow.id);
+        const { data, error } = await supabase
+          .from('workflows')
+          .update({
+            nodes: payload.nodes,
+            edges: payload.edges,
+            view_state: payload.view_state,
+            updated_at: payload.updated_at
+          })
+          .eq('id', existingWorkflow.id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('🔴 [apiService.saveWorkflow] Supabase UPDATE (existing name) error:', error);
+          throw error;
+        }
+
+        return {
+          workflow: {
+            id: data.id,
+            title: data.name || data.title || 'Untitled Workflow',
+            nodes: data.nodes,
+            edges: data.edges,
+            viewState: data.view_state,
+            createdAt: data.created_at,
+            updatedAt: data.updated_at,
+            created_by: data.created_by
+          }
+        };
+      }
+
       const { data, error } = await supabase
         .from('workflows')
         .insert(payload)
@@ -777,7 +948,7 @@ class ApiService {
   async listWorkflows(): Promise<WorkflowListResponse> {
     console.log('🔄 [ApiService] listWorkflows called');
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       console.warn('⚠️ [ApiService] No user logged in, returning empty list');
       return { workflows: [], total: 0 };
@@ -809,6 +980,102 @@ class ApiService {
       updatedAt: w.updated_at,
       created_by: w.created_by
     }));
+
+    return { workflows, total: workflows.length };
+  }
+
+  // List workflows with filtering and sorting
+  async listWorkflowsFiltered(filters: WorkflowFilters = {}): Promise<WorkflowListResponse> {
+    console.log('🔄 [ApiService] listWorkflowsFiltered called with:', filters);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      console.warn('⚠️ [ApiService] No user logged in, returning empty list');
+      return { workflows: [], total: 0 };
+    }
+
+    // Start building the query
+    let query = supabase.from('workflows').select('*');
+
+    // Apply search filter (searches in name/title)
+    if (filters.search && filters.search.trim()) {
+      query = query.ilike('name', `%${filters.search.trim()}%`);
+    }
+
+    // Apply date range filters
+    if (filters.dateFrom) {
+      query = query.gte('updated_at', filters.dateFrom.toISOString());
+    }
+    if (filters.dateTo) {
+      // Add 1 day to include the entire "to" date
+      const toDate = new Date(filters.dateTo);
+      toDate.setDate(toDate.getDate() + 1);
+      query = query.lt('updated_at', toDate.toISOString());
+    }
+
+    // Apply status filter (if status column exists)
+    if (filters.status && filters.status !== 'all') {
+      query = query.eq('status', filters.status);
+    }
+
+    // Apply starred filter (if is_starred column exists)
+    if (filters.isStarred !== undefined) {
+      query = query.eq('is_starred', filters.isStarred);
+    }
+
+    // Apply folder filter (if folder_id column exists)
+    if (filters.folderId !== undefined) {
+      if (filters.folderId === null) {
+        query = query.is('folder_id', null);
+      } else {
+        query = query.eq('folder_id', filters.folderId);
+      }
+    }
+
+    // Apply sorting
+    const sortBy = filters.sortBy || 'updated_at';
+    const sortOrder = filters.sortOrder || 'desc';
+
+    // Handle node_count sorting specially (need to sort in memory)
+    if (sortBy === 'node_count') {
+      query = query.order('updated_at', { ascending: false }); // Default sort for fetch
+    } else {
+      const sortColumn = sortBy === 'name' ? 'name' : sortBy;
+      query = query.order(sortColumn, { ascending: sortOrder === 'asc' });
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('❌ [ApiService] Error fetching filtered workflows:', error);
+      throw error;
+    }
+
+    console.log('✅ [ApiService] Filtered data from Supabase:', data?.length, 'rows');
+
+    let workflows = data.map((w: any) => ({
+      id: w.id,
+      title: w.name || w.title || 'Untitled Workflow',
+      nodes: w.nodes,
+      edges: w.edges,
+      viewState: w.view_state,
+      createdAt: w.created_at,
+      updatedAt: w.updated_at,
+      created_by: w.created_by,
+      status: w.status,
+      is_starred: w.is_starred,
+      folder_id: w.folder_id,
+      description: w.description
+    }));
+
+    // Handle node_count sorting in memory (since it's computed)
+    if (sortBy === 'node_count') {
+      workflows.sort((a, b) => {
+        const countA = a.nodes?.length || 0;
+        const countB = b.nodes?.length || 0;
+        return sortOrder === 'asc' ? countA - countB : countB - countA;
+      });
+    }
 
     return { workflows, total: workflows.length };
   }

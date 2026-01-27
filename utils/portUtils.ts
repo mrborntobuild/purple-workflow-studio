@@ -73,20 +73,24 @@ export const getPortConfigForNode = (nodeType: NodeType): { inputs: PortConfig[]
     case 'hunyuan_video_v1_5_t2v':
     case 'luma_ray_2':
     case 'luma_ray_2_flash':
-    case 'pika_2_2':
     case 'ltx_video':
-      return { 
-        inputs: [{ label: 'PROMPT', color: pink }], 
-        outputs: [{ label: 'VIDEO', color: videoRed }] 
+      return {
+        inputs: [{ label: 'PROMPT', color: pink }],
+        outputs: [{ label: 'VIDEO', color: videoRed }]
+      };
+    case 'pika_2_2':
+      return {
+        inputs: [{ label: 'IMAGE', color: blue }, { label: 'PROMPT', color: pink }],
+        outputs: [{ label: 'VIDEO', color: videoRed }]
       };
     case 'kling_2_6_pro':
     case 'kling_2_1_pro':
     case 'kling_2_0_master':
     case 'kling_1_6_pro':
     case 'kling_1_6_standard':
-      return { 
-        inputs: [{ label: 'PROMPT', color: pink }], 
-        outputs: [{ label: 'VIDEO', color: videoRed }] 
+      return {
+        inputs: [{ label: 'IMAGE', color: blue }, { label: 'PROMPT', color: pink }],
+        outputs: [{ label: 'VIDEO', color: videoRed }]
       };
     case 'veo_2':
     case 'veo_3_1':

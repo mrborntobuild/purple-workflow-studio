@@ -1,0 +1,15 @@
+{                                                                     
+    "mcpServers": {                                                     
+      "fal": {                                                          
+        "url": "https://docs.fal.ai/mcp"                                
+      },                                                                
+      "supabase": {                                                     
+        "type": "http",                                                 
+        "url":                                                          
+  "https://mcp.supabase.com/mcp?project_ref=vxsjiwlvradiyluppage",   
+        "headers": {                                                    
+          "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4c2ppd2x2cmFkaXlsdXBwYWdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0MDcxMTEsImV4cCI6MjA4MDk4MzExMX0.SphHTB-UNjPwx_rFioLwG321sxICF-oOtNm76ZQcg3U"            
+        }                                                               
+      }                                                                 
+    }                                                                   
+  }  
