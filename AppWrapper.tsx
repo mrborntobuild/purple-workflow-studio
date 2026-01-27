@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { AuthProvider, useAuth } from './components/AuthProvider';
 import LoginPage from './components/auth/LoginPage';
 import SignupPage from './components/auth/SignupPage';
+import ForgotPasswordPage from './components/auth/ForgotPasswordPage';
+import ResetPasswordPage from './components/auth/ResetPasswordPage';
 import App from './App';
 
 // Protected Route Component
@@ -33,7 +35,9 @@ const AppWrapper = () => {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
-          
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+
           {/* Protected Routes */}
           <Route
             path="/*"
