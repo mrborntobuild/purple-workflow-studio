@@ -13,7 +13,7 @@ fs.readFileSync('.env', 'utf8').split('\n').forEach(line => {
   }
 });
 
-const PORT = 3001;
+const PORT = 3000;
 const FAL_API_KEY = process.env.FAL_API_KEY;
 
 // Model mapping
