@@ -80,4 +80,26 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
 )
 TabsTrigger.displayName = "TabsTrigger"
 
-export { Tabs, TabsList, TabsTrigger }
+interface TabsLabelProps {
+  children: React.ReactNode
+  className?: string
+}
+
+const TabsLabel = React.forwardRef<HTMLDivElement, TabsLabelProps>(
+  ({ className, children }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-xs font-medium text-gray-600 cursor-default select-none",
+          className
+        )}
+      >
+        {children}
+      </div>
+    )
+  }
+)
+TabsLabel.displayName = "TabsLabel"
+
+export { Tabs, TabsList, TabsTrigger, TabsLabel }

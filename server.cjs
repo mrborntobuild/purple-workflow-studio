@@ -13,8 +13,40 @@ fs.readFileSync('.env', 'utf8').split('\n').forEach(line => {
   }
 });
 
-const PORT = 3000;
+const PORT = 5001;
 const FAL_API_KEY = process.env.FAL_API_KEY;
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Helper to make Supabase REST API calls
+function fetchSupabase(endpoint, options = {}) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(`/rest/v1${endpoint}`, SUPABASE_URL);
+    const req = https.request(url, {
+      method: options.method || 'GET',
+      headers: {
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': options.prefer || 'return=representation',
+        ...options.headers
+      }
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          resolve({ status: res.statusCode, data: data ? JSON.parse(data) : null });
+        } catch {
+          resolve({ status: res.statusCode, data });
+        }
+      });
+    });
+    req.on('error', reject);
+    if (options.body) req.write(JSON.stringify(options.body));
+    req.end();
+  });
+}
 
 // Model mapping
 const MODEL_MAP = {
@@ -260,6 +292,71 @@ async function handleRequest(req, res) {
       return;
     }
 
+    // Workflow run endpoint
+    if (path === '/api/workflow/run' && req.method === 'POST') {
+      const body = await parseBody(req);
+      const { workflowId, userId, inputData } = body;
+
+      if (!workflowId || !userId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'workflowId and userId required' }));
+        return;
+      }
+
+      console.log(`[Workflow Run] Starting workflow: ${workflowId}`);
+
+      // Fetch workflow
+      const workflowResult = await fetchSupabase(`/workflows?id=eq.${workflowId}&select=*`);
+      if (workflowResult.status !== 200 || !workflowResult.data?.[0]) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Workflow not found' }));
+        return;
+      }
+
+      const workflow = workflowResult.data[0];
+      const nodes = workflow.nodes || [];
+      const edges = workflow.edges || [];
+
+      // Filter executable nodes (skip annotations)
+      const executableNodes = nodes.filter(n => !['sticky_note', 'group'].includes(n.type));
+
+      // Create workflow run record
+      const runData = {
+        workflow_id: workflowId,
+        user_id: userId,
+        status: 'running',
+        input_data: inputData || {},
+        started_at: new Date().toISOString(),
+        total_nodes: executableNodes.length,
+        completed_nodes: 0
+      };
+
+      const runResult = await fetchSupabase('/workflow_runs', {
+        method: 'POST',
+        body: runData,
+        prefer: 'return=representation'
+      });
+
+      if (runResult.status !== 201 || !runResult.data?.[0]) {
+        console.error('[Workflow Run] Failed to create run:', runResult);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Failed to create workflow run', details: runResult.data }));
+        return;
+      }
+
+      const run = runResult.data[0];
+      console.log(`[Workflow Run] Created run: ${run.id}`);
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        runId: run.id,
+        status: 'running',
+        totalNodes: executableNodes.length,
+        message: 'Workflow execution started'
+      }));
+      return;
+    }
+
     // 404 for unknown routes
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Not found' }));
@@ -274,9 +371,12 @@ async function handleRequest(req, res) {
 const server = http.createServer(handleRequest);
 server.listen(PORT, () => {
   console.log(`\n🚀 API Server running at http://localhost:${PORT}`);
-  console.log(`   FAL_API_KEY: ${FAL_API_KEY ? '✓ Set' : '✗ Missing'}\n`);
+  console.log(`   FAL_API_KEY: ${FAL_API_KEY ? '✓ Set' : '✗ Missing'}`);
+  console.log(`   SUPABASE: ${SUPABASE_URL ? '✓ Set' : '✗ Missing'}`);
+  console.log(`   SERVICE_KEY: ${SUPABASE_SERVICE_KEY ? '✓ Set' : '✗ Missing'}\n`);
   console.log('Endpoints:');
   console.log(`   GET  http://localhost:${PORT}/api/health`);
   console.log(`   POST http://localhost:${PORT}/api/fal/generate`);
-  console.log(`   POST http://localhost:${PORT}/api/fal/status\n`);
+  console.log(`   POST http://localhost:${PORT}/api/fal/status`);
+  console.log(`   POST http://localhost:${PORT}/api/workflow/run\n`);
 });

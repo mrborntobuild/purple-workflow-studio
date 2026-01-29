@@ -1,12 +1,14 @@
 
 import React from 'react';
 
-export type NodeType = 
+export type NodeType =
   | 'any_llm' | 'basic_call' | 'image_describer' | 'video_describer'
-  | 'prompt_enhancer' | 'prompt_concatenator' | 'image' | 'text' | 'import' | 'export' | 'file' 
-  | 'preview' | 'levels' | 'compositor' | 'painter' 
+  | 'prompt_enhancer' | 'prompt_concatenator' | 'image' | 'text' | 'import' | 'export' | 'file'
+  | 'preview' | 'levels' | 'compositor' | 'painter'
   | 'crop' | 'resize' | 'blur' | 'invert' | 'channels' | 'video_frame'
   | 'number' | 'toggle' | 'list' | 'seed' | 'array' | 'options'
+  // Workflow nodes
+  | 'start_workflow' | 'output'
   // Image Models
   | 'nano_banana_pro' | 'nano_banana_pro_edit' | 'flux_pro_1_1_ultra' | 'flux_pro_1_1' | 'flux_dev' | 'flux_lora'
   | 'ideogram_v3' | 'ideogram_v3_edit' | 'imagen_3' | 'imagen_3_fast' | 'minimax_image'
@@ -110,7 +112,7 @@ export interface CanvasNode {
   };
 }
 
-export type DataType = 'text' | 'image' | 'video' | 'audio' | 'mask' | '3d_model' | 'file';
+export type DataType = 'text' | 'image' | 'video' | 'audio' | 'mask' | '3d_model' | 'file' | 'trigger';
 
 export interface ConnectionValidation {
   isValid: boolean;
@@ -137,6 +139,131 @@ export interface SidebarItem {
   id: NodeType;
   label: string;
   icon: React.ReactNode;
-  category: 'quick-access' | 'toolbox' | 'image-models' | 'video-models' | 'lip-sync' | 'upscaling' | '3d-gen' | 'audio-tts' | 'utility';
+  category: 'quick-access' | 'toolbox' | 'image-models' | 'video-models' | 'lip-sync' | 'upscaling' | '3d-gen' | 'audio-tts' | 'utility' | 'workflow';
   subCategory?: string;
+}
+
+// Database-aligned types for normalized storage
+
+export interface DBWorkflowNode {
+  id: string;
+  workflow_id: string;
+  node_type: string;
+  position_x: number;
+  position_y: number;
+  data: Record<string, any>;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DBWorkflowEdge {
+  id: string;
+  workflow_id: string;
+  source_node_id: string;
+  source_output_id: string;
+  target_node_id: string;
+  target_input_id: string;
+  created_at?: string;
+}
+
+export interface WorkflowRun {
+  id: string;
+  workflow_id: string;
+  user_id: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  input_data: Record<string, any>;
+  output_data?: Record<string, any>;
+  started_at?: string;
+  completed_at?: string;
+  error_message?: string;
+  total_nodes: number;
+  completed_nodes: number;
+  created_at: string;
+}
+
+export interface ExecutionLog {
+  id: string;
+  run_id: string;
+  workflow_node_id: string;
+  node_type: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+  input_data?: Record<string, any>;
+  output_data?: Record<string, any>;
+  job_id?: string;
+  job_model?: string;
+  started_at?: string;
+  completed_at?: string;
+  error_message?: string;
+  execution_order: number;
+  created_at: string;
+  // Joined fields
+  node_label?: string;
+}
+
+// Node Definition types (from database config tables)
+
+export interface DBNodeDefinition {
+  id: string;
+  node_type: string;
+  label: string;
+  description?: string;
+  icon?: string;
+  category: string;
+  sub_category?: string;
+  is_live: boolean;
+  created_at?: string;
+}
+
+export interface DBNodeInput {
+  id: string;
+  node_type: string;
+  input_id: string;
+  label: string;
+  input_type: string;
+  required: boolean;
+  optional_label?: string;
+  placeholder?: string;
+  supports_multiple?: boolean;
+  order_index: number;
+}
+
+export interface DBNodeOutput {
+  id: string;
+  node_type: string;
+  output_id: string;
+  label: string;
+  output_type: string;
+  order_index: number;
+}
+
+export interface DBModelParameter {
+  id: string;
+  model_id: string;
+  parameter_key: string;
+  label: string;
+  type: 'text' | 'number' | 'select' | 'toggle' | 'slider';
+  default_value?: any;
+  options?: string[];
+  min?: number;
+  max?: number;
+  step?: number;
+  order_index: number;
+}
+
+export interface DBConnectionRule {
+  id: string;
+  source_type: string;
+  source_output_index: number;
+  target_type: string;
+  target_input_index: number;
+  is_allowed: boolean;
+}
+
+export interface NodeDefinitions {
+  definitions: Record<string, DBNodeDefinition>;
+  inputs: Record<string, DBNodeInput[]>;
+  outputs: Record<string, DBNodeOutput[]>;
+  modelParameters: Record<string, DBModelParameter[]>;
+  connectionRules: DBConnectionRule[];
+  isLoaded: boolean;
 }

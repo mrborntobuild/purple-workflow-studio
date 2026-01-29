@@ -1089,6 +1089,159 @@ class ApiService {
 
     if (error) throw error;
   }
+
+  // Start a workflow execution
+  async startWorkflowRun(workflowId: string, inputData?: Record<string, any>): Promise<{
+    runId: string;
+    status: string;
+    totalNodes: number;
+  }> {
+    console.log('🔵 [apiService.startWorkflowRun] Starting workflow:', workflowId);
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('User must be logged in to run workflows');
+    }
+
+    const response = await fetch(`${this.baseUrl}/workflow/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workflowId,
+        userId: user.id,
+        inputData: inputData || {}
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to start workflow: ${response.status} ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log('🟢 [apiService.startWorkflowRun] Run started:', result);
+
+    return {
+      runId: result.runId,
+      status: result.status,
+      totalNodes: result.totalNodes
+    };
+  }
+
+  // Get workflow run status
+  async getWorkflowRunStatus(runId: string): Promise<{
+    runId: string;
+    status: string;
+    totalNodes: number;
+    completedNodes: number;
+    output?: Record<string, any>;
+    error?: string;
+    logs?: Array<{
+      nodeId: string;
+      nodeType: string;
+      status: string;
+      output?: any;
+      error?: string;
+      order: number;
+    }>;
+  }> {
+    console.log('🔵 [apiService.getWorkflowRunStatus] Checking status:', runId);
+
+    const response = await fetch(`${this.baseUrl}/workflow/run/${runId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to get run status: ${response.status} ${errorText}`);
+    }
+
+    const result = await response.json();
+    return result;
+  }
+
+  // Get execution logs for a run
+  async getExecutionLogs(runId: string): Promise<{
+    runId: string;
+    workflowId: string;
+    runStatus: string;
+    totalNodes: number;
+    completedNodes: number;
+    logs: Array<{
+      id: string;
+      nodeId: string;
+      nodeType: string;
+      nodeLabel: string;
+      status: string;
+      input?: any;
+      output?: any;
+      jobId?: string;
+      error?: string;
+      executionOrder: number;
+      startedAt?: string;
+      completedAt?: string;
+      duration?: number;
+    }>;
+  }> {
+    console.log('🔵 [apiService.getExecutionLogs] Fetching logs:', runId);
+
+    const response = await fetch(`${this.baseUrl}/workflow/run/${runId}/logs`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to get logs: ${response.status} ${errorText}`);
+    }
+
+    const result = await response.json();
+    return result;
+  }
+
+  // List workflow runs for a workflow
+  async listWorkflowRuns(workflowId: string): Promise<Array<{
+    id: string;
+    status: string;
+    totalNodes: number;
+    completedNodes: number;
+    startedAt?: string;
+    completedAt?: string;
+    createdAt: string;
+  }>> {
+    console.log('🔵 [apiService.listWorkflowRuns] Listing runs for:', workflowId);
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('workflow_runs')
+      .select('*')
+      .eq('workflow_id', workflowId)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      console.error('🔴 [apiService.listWorkflowRuns] Error:', error);
+      throw error;
+    }
+
+    return (data || []).map(run => ({
+      id: run.id,
+      status: run.status,
+      totalNodes: run.total_nodes,
+      completedNodes: run.completed_nodes,
+      startedAt: run.started_at,
+      completedAt: run.completed_at,
+      createdAt: run.created_at
+    }));
+  }
 }
 
 export const apiService = new ApiService();

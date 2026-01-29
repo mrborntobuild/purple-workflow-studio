@@ -214,7 +214,7 @@ export const getPortConfigForNode = (nodeType: NodeType): { inputs: PortConfig[]
     case 'text':
     case 'basic_call':
       return {
-        inputs: [],
+        inputs: [{ label: 'TRIGGER', color: '#22c55e' }], // Green trigger input for workflow
         outputs: [{ label: 'TEXT', color: pink }]
       };
 
@@ -231,7 +231,7 @@ export const getPortConfigForNode = (nodeType: NodeType): { inputs: PortConfig[]
 
     case 'file':
       return {
-        inputs: [],
+        inputs: [{ label: 'TRIGGER', color: '#22c55e' }], // Green trigger input for workflow
         outputs: [{ label: 'IMAGE', color: blue }]
       };
 
@@ -368,6 +368,23 @@ export const getPortConfigForNode = (nodeType: NodeType): { inputs: PortConfig[]
     case 'sticky_note':
       return {
         inputs: [],
+        outputs: []
+      };
+
+    // Workflow nodes
+    case 'start_workflow':
+      return {
+        inputs: [],
+        outputs: [
+          { label: 'TRIGGER', color: '#22c55e' } // Green for workflow start
+        ]
+      };
+
+    case 'output':
+      return {
+        inputs: [
+          { label: 'RESULT', color: '#22c55e' } // Single green input for any result
+        ],
         outputs: []
       };
 

@@ -1,7 +1,9 @@
 import { PortConfig } from '../components/nodes/BaseNode';
-import { DataType, ConnectionValidation } from '../types';
+import { DataType, ConnectionValidation, NodeType } from '../types';
 import { getPortConfigForNode } from './portUtils';
-import { NodeType } from '../types';
+
+// Re-export DataType for convenience
+export type { DataType };
 
 /**
  * Core validation logic - extracts data type from port configuration
@@ -50,7 +52,12 @@ export const getDataTypeFromPort = (port: PortConfig): DataType => {
   if (label.includes('SVG') || label.includes('FILE')) {
     return 'file';
   }
-  
+
+  // Trigger types (Green) - for workflow connections
+  if (label.includes('TRIGGER')) {
+    return 'trigger';
+  }
+
   return 'text'; // Default fallback
 };
 
@@ -110,7 +117,7 @@ export const findCompatibleInputPortIndex = (
   sourceOutputType: DataType
 ): number => {
   const portConfig = getPortConfigForNode(nodeType);
-  
+
   for (let i = 0; i < portConfig.inputs.length; i++) {
     const inputPort = portConfig.inputs[i];
     const inputType = getDataTypeFromPort(inputPort);
@@ -118,8 +125,53 @@ export const findCompatibleInputPortIndex = (
       return i;
     }
   }
-  
+
   return -1; // No compatible port found
+};
+
+/**
+ * Validates workflow-specific connections
+ * start_workflow can only connect to text and file nodes
+ * output node can accept connections from any node with output
+ */
+export const validateWorkflowConnection = (
+  sourceNodeType: NodeType,
+  targetNodeType: NodeType
+): ConnectionValidation => {
+  // Start workflow can only connect to text or file nodes (triggers)
+  if (sourceNodeType === 'start_workflow') {
+    // Also disallow connecting directly to output
+    if (targetNodeType === 'output') {
+      return {
+        isValid: false,
+        reason: 'Cannot connect Start Workflow directly to Output'
+      };
+    }
+    const validTargets: NodeType[] = ['text', 'basic_call', 'file'];
+    if (!validTargets.includes(targetNodeType)) {
+      return {
+        isValid: false,
+        reason: 'Start Workflow can only connect to Text or File nodes'
+      };
+    }
+    return { isValid: true };
+  }
+
+  // Output node accepts connections from most nodes with outputs
+  if (targetNodeType === 'output') {
+    // start_workflow case already handled above
+    return { isValid: true };
+  }
+
+  // For non-workflow connections, use default validation
+  return { isValid: true };
+};
+
+/**
+ * Check if a node type is a valid trigger for workflow mode
+ */
+export const isValidTriggerNode = (nodeType: NodeType): boolean => {
+  return nodeType === 'text' || nodeType === 'basic_call' || nodeType === 'file';
 };
 
 

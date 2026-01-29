@@ -49,16 +49,8 @@ const Port: React.FC<{
       className={`flex items-center ${isLeft ? 'flex-row-reverse' : 'flex-row'} ${!isLeft ? 'cursor-pointer' : ''}`}
       onClick={handlePortClick}
     >
-      {/* Port Body - The area sticking out of the node */}
+      {/* Port Body */}
       <div className="relative flex h-10 w-6 items-center justify-center overflow-visible pointer-events-auto flex-shrink-0">
-        {/* Tab Protrusion - Background piece that connects to the node edge */}
-        <div 
-          className={`absolute ${isLeft ? 'right-0 rounded-l-full border-l' : 'left-0 rounded-r-full border-r'} h-[36px] w-8 bg-[#1a1b1e] border-t border-b border-white/10 shadow-2xl`} 
-          style={{ 
-            transform: isLeft ? 'translateX(2px)' : 'translateX(-2px)' 
-          }}
-        />
-        
         {/* React Flow Handle */}
         <Handle
           type={isLeft ? 'target' : 'source'}
@@ -137,9 +129,10 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
 
   return (
     <div 
-      className={`relative flex w-[340px] flex-col overflow-visible rounded-2xl border transition-all duration-200 bg-[#1a1b1e] shadow-2xl backdrop-blur-sm group ${
-        selected ? 'border-purple-500/60 ring-1 ring-purple-500/20' : 'border-white/5'
+      className={`relative flex w-[340px] flex-col overflow-visible rounded-2xl transition-all duration-200 bg-[#1a1b1e] border-0 outline-none group ${
+        selected ? 'ring-2 ring-purple-500/60' : ''
       }`}
+      style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}
       onMouseDown={onMouseDown}
     >
       {/* Node Header */}
@@ -186,7 +179,7 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
       </div>
 
       {/* Content Container */}
-      <div className="mx-4 mb-4 flex-1 rounded-xl p-4 bg-[#212226] border border-white/[0.04] shadow-inner overflow-hidden">
+      <div className="mx-4 mb-4 flex-1 rounded-xl p-4 bg-[#212226] shadow-inner overflow-hidden">
         {children}
       </div>
     </div>

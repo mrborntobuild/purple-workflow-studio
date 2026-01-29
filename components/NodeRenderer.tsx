@@ -1,14 +1,15 @@
 
 import React, { useRef } from 'react';
 /* Fix: Added missing Box import from lucide-react */
-import { 
-  Sliders, Palette, Layers, Sparkles, 
-  Image as ImageIcon, Crop as CropIcon, 
+import {
+  Sliders, Palette, Layers, Sparkles,
+  Image as ImageIcon, Crop as CropIcon,
   Droplets, RefreshCcw, ListFilter, Video, Type, Wand2, PlusCircle, Brain, Camera, FileVideo, File,
   Hash, ToggleRight, List as ListIcon, Dice5, Braces, Zap, Film, Clapperboard,
-  Smile, UserCircle, MessageCircle, Waves, Volume2, Mic2, Music, 
-  Activity, BoxSelect, Box, Maximize, Maximize2, Scissors, Binary, Calculator, Globe, MapPin, 
-  Terminal, Timer, Palette as PaletteIcon, AudioLines, Radio, Bird
+  Smile, UserCircle, MessageCircle, Waves, Volume2, Mic2, Music,
+  Activity, BoxSelect, Box, Maximize, Maximize2, Scissors, Binary, Calculator, Globe, MapPin,
+  Terminal, Timer, Palette as PaletteIcon, AudioLines, Radio, Bird,
+  Play, Flag
 } from 'lucide-react';
 import { CanvasNode, Edge } from '../types';
 
@@ -53,6 +54,8 @@ import { ModulePlaceholderNode } from './nodes/ModulePlaceholderNode';
 import { VideoNode } from './nodes/VideoNode';
 import { StyleGuideNode } from './nodes/StyleGuideNode';
 import { GroupNode } from './nodes/GroupNode';
+import { StartWorkflowNode } from './nodes/StartWorkflowNode';
+import { OutputNode } from './nodes/OutputNode';
 
 interface NodeRendererProps {
   node: CanvasNode;
@@ -269,7 +272,19 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ node, selected, onDe
 
       case 'sad_talker':
         return <ModulePlaceholderNode label={node.data.label} icon={<Zap size={24} />} />;
-        
+
+      // Workflow nodes
+      case 'start_workflow': {
+        // Count connected triggers (edges going out from this node)
+        const connectedTriggers = edges.filter(e => e.source === node.id).length;
+        return <StartWorkflowNode connectedTriggers={connectedTriggers} />;
+      }
+      case 'output': {
+        // Count connected results (edges coming into this node)
+        const connectedResults = edges.filter(e => e.target === node.id).length;
+        return <OutputNode connectedResults={connectedResults} />;
+      }
+
       default:
         return <div className="py-12 text-gray-600 italic text-sm text-center">Module Coming Soon</div>;
     }
@@ -462,10 +477,10 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ node, selected, onDe
       case 'painter':
         return { headerIcon: <Palette size={16} />, inputs: [{ label: 'IMAGE', color: blue }], outputs: [{ label: 'IMAGE', color: blue }] };
 
-      // Text node - outputs TEXT type
+      // Text node - has TRIGGER input for workflow, outputs TEXT type
       case 'text':
       case 'basic_call':
-        return { headerIcon: <Type size={16} />, inputs: [], outputs: [{ label: 'TEXT', color: pink }] };
+        return { headerIcon: <Type size={16} />, inputs: [{ label: 'TRIGGER', color: '#22c55e' }], outputs: [{ label: 'TEXT', color: pink }] };
 
       // Array node - accepts TEXT input, outputs ARRAY
       case 'array':
@@ -500,9 +515,9 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ node, selected, onDe
         };
       }
 
-      // File node - outputs IMAGE type
+      // File node - has TRIGGER input for workflow, outputs IMAGE type
       case 'file':
-        return { headerIcon: <File size={16} />, inputs: [], outputs: [{ label: 'IMAGE', color: blue }] };
+        return { headerIcon: <File size={16} />, inputs: [{ label: 'TRIGGER', color: '#22c55e' }], outputs: [{ label: 'IMAGE', color: blue }] };
 
       // Style Guide node - accepts Background + dynamic Layer inputs (all IMAGE type)
       case 'style_guide': {
@@ -517,12 +532,29 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ node, selected, onDe
           inputs.push({ label: `Layer ${i}`, color: blue, dataType: 'image' as const });
         }
 
-        return { 
-          headerIcon: <PaletteIcon size={16} />, 
-          inputs, 
+        return {
+          headerIcon: <PaletteIcon size={16} />,
+          inputs,
           outputs: [{ label: 'IMAGE', color: blue }]
         };
       }
+
+      // Workflow nodes
+      case 'start_workflow':
+        return {
+          headerIcon: <Play size={16} className="text-green-500" />,
+          inputs: [],
+          outputs: [{ label: 'TRIGGER', color: '#22c55e' }]
+        };
+
+      case 'output':
+        return {
+          headerIcon: <Flag size={16} className="text-orange-500" />,
+          inputs: [
+            { label: 'RESULT', color: '#22c55e' } // Single green input for any result
+          ],
+          outputs: []
+        };
 
       default:
         return { outputs: [{ label: 'Output', color: '#94a3b8' }] };

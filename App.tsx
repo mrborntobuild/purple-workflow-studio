@@ -1,17 +1,17 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { 
-  Search, Clock, Briefcase, Image as ImageIcon, 
-  Play, Box, Sparkles, HelpCircle, MessageSquare, 
-  Share2, ChevronDown, MousePointer2, Hand, 
+import {
+  Search, Clock, Briefcase, Image as ImageIcon,
+  Play, Box, Sparkles, HelpCircle, MessageSquare,
+  Share2, ChevronDown, MousePointer2, Hand,
   RotateCcw, RotateCw, Plus, Trash2, X,
   FileUp, FileDown, File, Eye, Database, Layers, Palette, Crop, Maximize2, Droplets,
   RefreshCcw, Video, ListFilter, Type, Wand2, PlusCircle, Brain, Camera, FileVideo,
-  Hash, ToggleRight, List, Dice5, Braces, Film, Zap, Clapperboard, 
-  Smile, UserCircle, MessageCircle, Waves, Volume2, Mic2, Music, 
-  Activity, BoxSelect, Maximize, Scissors, Binary, Calculator, Globe, MapPin, 
+  Hash, ToggleRight, List, Dice5, Braces, Film, Zap, Clapperboard,
+  Smile, UserCircle, MessageCircle, Waves, Volume2, Mic2, Music,
+  Activity, BoxSelect, Maximize, Scissors, Binary, Calculator, Globe, MapPin,
   Terminal, Timer, Palette as PaletteIcon, Bird, Radio, Info, Minus, ArrowRight,
-  StickyNote, Group
+  StickyNote, Group, Flag
 } from 'lucide-react';
 import { 
   ReactFlow,
@@ -45,10 +45,12 @@ import { ApiTestPage } from './components/ApiTestPage';
 import WorkflowDashboard from './components/WorkflowDashboard';
 import { NODE_PANEL_CONFIG } from './components/nodePanelConfig';
 import { getPortConfigForNode, getEdgeStyleFromPort } from './utils/portUtils';
-import { validatePortConnection, getDataTypeFromPort, findCompatibleInputPortIndex, DataType } from './utils/typeValidation';
+import { validatePortConnection, getDataTypeFromPort, findCompatibleInputPortIndex, validateWorkflowConnection, DataType } from './utils/typeValidation';
 import { debounce, DebouncedFunction } from './utils/debounce';
-import { Tabs, TabsList, TabsTrigger } from './components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsLabel } from './components/ui/tabs';
 import { AppView } from './components/AppView';
+import { LogView } from './components/LogView';
+import { NodeDefinitionsProvider } from './contexts/NodeDefinitionsContext';
 
 const GOOGLE_LOGO_URL = 'https://vxsjiwlvradiyluppage.supabase.co/storage/v1/object/public/logo-images/google.png';
 const KLING_LOGO_URL = 'https://vxsjiwlvradiyluppage.supabase.co/storage/v1/object/public/logo-images/kling-ai.png';
@@ -160,6 +162,10 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: 'image_to_svg', label: 'Image to SVG', icon: <ImageIcon size={20} />, category: 'utility' },
   { id: 'speech_to_text', label: 'Speech to Text', icon: <Mic2 size={20} />, category: 'utility' },
   { id: 'whisper', label: 'Whisper', icon: <Mic2 size={20} />, category: 'utility' },
+
+  // Workflow
+  { id: 'start_workflow', label: 'Start Workflow', icon: <Play size={20} className="text-green-500" />, category: 'workflow' },
+  { id: 'output', label: 'Output', icon: <Flag size={20} className="text-orange-500" />, category: 'workflow' },
 ];
 
 const SidebarCategory: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => {
@@ -601,11 +607,31 @@ function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerO
     
     const outputPort = sourceConfig.outputs[sourcePortIndex];
     const inputPortConfig = targetConfig.inputs[targetPortIndex];
-    
+
     if (!outputPort || !inputPortConfig) return;
-    
+
+    // Check workflow-specific connection rules first
+    const workflowValidation = validateWorkflowConnection(sourceNode.type, targetNode.type);
+    if (!workflowValidation.isValid) {
+      console.warn('Connection rejected:', workflowValidation.reason);
+      return;
+    }
+
+    // For start_workflow connections to triggers, allow the connection
+    // (TRIGGER output can connect to text/file nodes which don't have matching input types)
+    if (sourceNode.type === 'start_workflow') {
+      setRfEdges((eds) => addEdge(params, eds));
+      return;
+    }
+
+    // For connections to output node, allow any valid output
+    if (targetNode.type === 'output') {
+      setRfEdges((eds) => addEdge(params, eds));
+      return;
+    }
+
     const validation = validatePortConnection(outputPort, inputPortConfig);
-    
+
     if (validation.isValid) {
       setRfEdges((eds) => addEdge(params, eds));
     }
@@ -1163,6 +1189,9 @@ function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerO
     sticky_note: CustomNodeWrapper,
     style_guide: CustomNodeWrapper,
     group: CustomNodeWrapper,
+    // Workflow nodes
+    start_workflow: CustomNodeWrapper,
+    output: CustomNodeWrapper,
   }), [workflowId]); // Recreate when workflowId changes
   
   return (
@@ -1245,7 +1274,7 @@ export default function App() {
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [groupNodesHandler, setGroupNodesHandler] = useState<(() => void) | null>(null);
   const [cursorMode, setCursorMode] = useState<'pointer' | 'hand'>('hand');
-  const [editorMode, setEditorMode] = useState<'workflow' | 'app'>('workflow');
+  const [editorMode, setEditorMode] = useState<'workflow' | 'app' | 'log'>('workflow');
 
   // Track last saved state to prevent unnecessary saves/dirty flags
   const lastSavedStateRef = useRef<string>('');
@@ -1731,6 +1760,7 @@ export default function App() {
   }
   
   return (
+    <NodeDefinitionsProvider>
     <ReactFlowProvider>
       <div className="relative h-screen w-screen overflow-hidden bg-[#050506] text-gray-300">
         {/* Top Toolbar */}
@@ -1767,10 +1797,11 @@ export default function App() {
             {isSavingWorkflow && (
               <span className="text-xs text-gray-500">Saving...</span>
             )}
-            <Tabs value={editorMode} onValueChange={(v) => setEditorMode(v as 'workflow' | 'app')}>
+            <Tabs value={editorMode} onValueChange={(v) => setEditorMode(v as 'workflow' | 'app' | 'log')}>
               <TabsList>
                 <TabsTrigger value="workflow">Workflow</TabsTrigger>
                 <TabsTrigger value="app">App</TabsTrigger>
+                <TabsTrigger value="log">Logs</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -1802,10 +1833,24 @@ export default function App() {
           </div>
         </div>
         
-        {editorMode === 'app' && <AppView />}
+        {editorMode === 'app' && (
+          <AppView
+            nodes={canvasNodes}
+            edges={canvasEdges}
+            workflowTitle={workflowTitle}
+            workflowId={currentWorkflowId || undefined}
+            onUpdateNode={(id, data) => {
+              if (nodeUpdateHandlerRef.current) {
+                nodeUpdateHandlerRef.current(id, data);
+              }
+            }}
+          />
+        )}
+
+        {editorMode === 'log' && <LogView workflowId={currentWorkflowId} />}
 
         {/* Sidebar */}
-        <aside className={`absolute left-0 top-14 z-20 flex h-[calc(100vh-3.5rem)] w-[280px] flex-col border-r border-white/5 bg-[#0e0e11] py-4 ${editorMode === 'app' ? 'hidden' : ''}`}>
+        <aside className={`absolute left-0 top-14 z-20 flex h-[calc(100vh-3.5rem)] w-[280px] flex-col border-r border-white/5 bg-[#0e0e11] py-4 ${editorMode !== 'workflow' ? 'hidden' : ''}`}>
           <div className="px-6 mb-6">
             <div className="flex items-center gap-3 mb-8">
               <div className="h-8 w-8 rounded-full bg-purple-600 shadow-[0_0_15px_rgba(147,51,234,0.4)] transition-all hover:scale-110" />
@@ -1936,6 +1981,14 @@ export default function App() {
                     ))}
                   </div>
                 </SidebarCategory>
+
+                <SidebarCategory title="Workflow">
+                  <div className="grid grid-cols-2 gap-2">
+                    {SIDEBAR_ITEMS.filter(item => item.category === 'workflow').map(item => (
+                      <SidebarDraggableItem key={item.id} item={item} onDragStart={onDragStart} />
+                    ))}
+                  </div>
+                </SidebarCategory>
               </>
             )}
           </div>
@@ -1950,7 +2003,7 @@ export default function App() {
           </div>
         </aside>
 
-        <header className={`absolute left-[280px] top-0 z-10 flex h-16 items-center justify-end px-8 pointer-events-none transition-all right-0 ${editorMode === 'app' ? 'hidden' : ''}`}>
+        <header className={`absolute left-[280px] top-0 z-10 flex h-16 items-center justify-end px-8 pointer-events-none transition-all right-0 ${editorMode !== 'workflow' ? 'hidden' : ''}`}>
           <div className="flex items-center gap-3 pointer-events-auto">
             <div className="flex items-center gap-2 rounded-xl bg-[#1a1b1e] px-4 py-2 text-xs font-medium text-gray-400">
               <Sparkles size={14} className="text-yellow-500" />
@@ -1966,7 +2019,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className={`relative h-[calc(100vh-3.5rem)] bg-[#050506] overflow-hidden transition-all ml-[280px] mt-14 ${selectedNodeData && NODE_PANEL_CONFIG[selectedNodeData.type] && NODE_PANEL_CONFIG[selectedNodeData.type]!.length > 0 ? 'mr-[360px]' : ''} ${editorMode === 'app' ? 'hidden' : ''}`}>
+        <main className={`relative h-[calc(100vh-3.5rem)] bg-[#050506] overflow-hidden transition-all ml-[280px] mt-14 ${selectedNodeData && NODE_PANEL_CONFIG[selectedNodeData.type] && NODE_PANEL_CONFIG[selectedNodeData.type]!.length > 0 ? 'mr-[360px]' : ''} ${editorMode !== 'workflow' ? 'hidden' : ''}`}>
           
           {/* Loading Overlay */}
           {isLoadingWorkflows && (
@@ -2118,5 +2171,6 @@ export default function App() {
         )}
       </div>
     </ReactFlowProvider>
+    </NodeDefinitionsProvider>
   );
 }
