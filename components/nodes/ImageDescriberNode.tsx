@@ -1,6 +1,6 @@
-
 import React from 'react';
 import { Play } from 'lucide-react';
+import { useAutoResizeTextarea } from '../../hooks/useAutoResizeTextarea';
 
 interface ImageDescriberNodeProps {
   content: string;
@@ -10,13 +10,19 @@ interface ImageDescriberNodeProps {
 }
 
 export const ImageDescriberNode: React.FC<ImageDescriberNodeProps> = ({ content, status, onUpdate, onRun }) => {
+  const { ref, resize } = useAutoResizeTextarea(content, { minHeight: 120, maxHeight: 400 });
+
   return (
     <div className="flex flex-col gap-4 min-h-[350px]">
-      <textarea 
-        className="w-full flex-1 resize-none rounded-xl bg-[#161719] p-4 text-[15px] leading-relaxed text-gray-300 placeholder-gray-600 outline-none border border-white/5 shadow-inner"
+      <textarea
+        ref={ref}
+        className="w-full min-h-[120px] max-h-[400px] overflow-y-auto resize-none rounded-xl bg-[#161719] p-4 text-[15px] leading-relaxed text-gray-300 placeholder-gray-600 outline-none border border-white/5 shadow-inner"
         placeholder="The generated text will appear here"
         value={content}
-        onChange={(e) => onUpdate({ content: e.target.value })}
+        onChange={(e) => {
+          onUpdate({ content: e.target.value });
+          resize();
+        }}
       />
       
       <div className="flex items-center justify-between mt-auto">

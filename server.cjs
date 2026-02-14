@@ -273,11 +273,20 @@ async function handleRequest(req, res) {
           output_url = fullResult.data.video.url;
         }
 
+        // Extract thumbnail URL from video response
+        let thumbnail_url = null;
+        if (fullResult.data.video?.thumbnail_url) {
+          thumbnail_url = fullResult.data.video.thumbnail_url;
+        } else if (fullResult.data.thumbnail?.url) {
+          thumbnail_url = fullResult.data.thumbnail.url;
+        }
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           status: 'COMPLETED',
           request_id,
           output_url,
+          thumbnail_url,
           raw: fullResult.data
         }));
         return;

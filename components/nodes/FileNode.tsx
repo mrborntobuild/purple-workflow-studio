@@ -82,6 +82,10 @@ export const FileNode: React.FC<FileNodeProps> = ({
     if (file) {
       handleFileSelect(file);
     }
+    // Reset input so selecting the same file again triggers onChange
+    if (e.target) {
+      e.target.value = '';
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {

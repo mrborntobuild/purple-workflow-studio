@@ -114,10 +114,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           outputData = fullResult.image;
         }
 
+        // Extract thumbnail URL from video response
+        let thumbnailUrl = null;
+        if (fullResult.video?.thumbnail_url) {
+          thumbnailUrl = fullResult.video.thumbnail_url;
+        } else if (fullResult.thumbnail?.url) {
+          thumbnailUrl = fullResult.thumbnail.url;
+        }
+
         return res.status(200).json({
           status: 'COMPLETED',
           request_id,
           output_url: outputUrl,
+          thumbnail_url: thumbnailUrl,
           output: outputData,
           raw: fullResult,
         });

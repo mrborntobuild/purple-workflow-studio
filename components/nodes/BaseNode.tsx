@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { MoreHorizontal } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { MoreHorizontal, Copy, Trash2 } from 'lucide-react';
 import { Handle, Position } from '@xyflow/react';
 import { NodeType, DataType } from '../../types';
 
@@ -17,6 +17,7 @@ interface BaseNodeProps {
   label: string;
   selected?: boolean;
   onDelete: (id: string) => void;
+  onDuplicate?: (id: string) => void;
   children: React.ReactNode;
   onMouseDown: (e: React.MouseEvent) => void;
   inputs?: PortConfig[];
@@ -90,13 +91,14 @@ const Port: React.FC<{
   );
 };
 
-export const BaseNode: React.FC<BaseNodeProps> = ({ 
-  id, 
-  type, 
-  label, 
-  selected, 
-  onDelete, 
-  children, 
+export const BaseNode: React.FC<BaseNodeProps> = ({
+  id,
+  type,
+  label,
+  selected,
+  onDelete,
+  onDuplicate,
+  children,
   onMouseDown,
   inputs = [],
   outputs = [],
@@ -105,6 +107,20 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
   inputPortPosition = 'center',
   outputPortPosition = 'center'
 }) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
   // Calculate positioning classes for input ports
   const getInputPortContainerClass = () => {
     const baseClass = "absolute right-full flex flex-col gap-4 pointer-events-none z-30";
@@ -143,10 +159,33 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
             {label}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="p-1 text-gray-600 hover:text-white transition-colors opacity-60 group-hover:opacity-100">
+        <div className="relative flex items-center gap-2" ref={menuRef}>
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+            className="p-1 text-gray-600 hover:text-white transition-colors opacity-60 group-hover:opacity-100"
+          >
             <MoreHorizontal size={16} />
           </button>
+          {showMenu && (
+            <div className="absolute right-0 top-8 z-50 min-w-[140px] rounded-xl border border-white/10 bg-[#1a1b1e] py-1 shadow-2xl">
+              {onDuplicate && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDuplicate(id); setShowMenu(false); }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-xs text-gray-300 hover:bg-white/10 transition-colors"
+                >
+                  <Copy size={13} />
+                  Duplicate
+                </button>
+              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(id); setShowMenu(false); }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <Trash2 size={13} />
+                Delete
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -179,7 +218,7 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
       </div>
 
       {/* Content Container */}
-      <div className="mx-4 mb-4 flex-1 rounded-xl p-4 bg-[#212226] shadow-inner overflow-hidden">
+      <div className="mx-4 mb-4 flex-1 rounded-xl p-4 bg-[#212226] shadow-inner">
         {children}
       </div>
     </div>

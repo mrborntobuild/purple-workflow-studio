@@ -47,6 +47,8 @@ export interface CanvasNode {
     label: string;
     content?: string;
     imageUrl?: string;
+    videoUrl?: string;
+    thumbnailUrl?: string;
     status?: 'idle' | 'loading' | 'error' | 'success';
     jobId?: string;
     usedModel?: string;

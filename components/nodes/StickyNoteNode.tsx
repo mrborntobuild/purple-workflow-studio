@@ -1,6 +1,6 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Palette } from 'lucide-react';
+import { useAutoResizeTextarea } from '../../hooks/useAutoResizeTextarea';
 
 interface StickyNoteNodeProps {
   id: string;
@@ -51,7 +51,9 @@ export const StickyNoteNode: React.FC<StickyNoteNodeProps> = ({
   const currentColor = COLOR_OPTIONS.find(c => c.name === noteColor) || COLOR_OPTIONS[0];
   const bgColor = currentColor.value;
   const textColor = currentColor.textColor;
-  
+
+  const { ref: contentRef, resize: resizeContent } = useAutoResizeTextarea(content, { minHeight: 60 });
+
   const width = noteWidth || DEFAULT_WIDTH;
   const height = noteHeight || DEFAULT_HEIGHT;
 
@@ -218,10 +220,14 @@ export const StickyNoteNode: React.FC<StickyNoteNodeProps> = ({
       {/* Content Area */}
       <div className="px-3 pb-3 flex-1 overflow-hidden flex flex-col min-h-0">
         <textarea
+          ref={contentRef}
           value={content}
-          onChange={(e) => handleContentChange(e.target.value)}
+          onChange={(e) => {
+            handleContentChange(e.target.value);
+            resizeContent();
+          }}
           placeholder="Write your note here..."
-          className="w-full h-full bg-transparent border-none outline-none resize-none text-sm leading-relaxed placeholder-opacity-50"
+          className="w-full min-h-[60px] overflow-hidden bg-transparent border-none outline-none resize-none text-sm leading-relaxed placeholder-opacity-50"
           style={{
             color: textColor,
           }}

@@ -6,6 +6,8 @@ import SignupPage from './components/auth/SignupPage';
 import ForgotPasswordPage from './components/auth/ForgotPasswordPage';
 import ResetPasswordPage from './components/auth/ResetPasswordPage';
 import App from './App';
+import ProfilePage from './components/ProfilePage';
+
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -39,6 +41,15 @@ const AppWrapper = () => {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Protected Routes */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/*"
             element={

@@ -1,6 +1,6 @@
-
 import React from 'react';
 import { Play } from 'lucide-react';
+import { useAutoResizeTextarea } from '../../hooks/useAutoResizeTextarea';
 
 interface AnyLLMNodeProps {
   content: string;
@@ -10,13 +10,15 @@ interface AnyLLMNodeProps {
   onRun?: () => void;
 }
 
-export const AnyLLMNode: React.FC<AnyLLMNodeProps> = ({ 
-  content, 
-  status, 
+export const AnyLLMNode: React.FC<AnyLLMNodeProps> = ({
+  content,
+  status,
   mediaInputCount = 0,
-  onUpdate, 
-  onRun 
+  onUpdate,
+  onRun
 }) => {
+  const { ref, resize } = useAutoResizeTextarea(content, { minHeight: 120 });
+
   const handleAddMediaInput = (e: React.MouseEvent) => {
     e.stopPropagation();
     const newCount = (mediaInputCount || 0) + 1;
@@ -41,11 +43,15 @@ export const AnyLLMNode: React.FC<AnyLLMNodeProps> = ({
 
   return (
     <div className="flex flex-col gap-4 min-h-[400px]">
-      <textarea 
-        className="w-full flex-1 resize-none rounded-xl bg-[#161719] p-4 text-[15px] leading-relaxed text-gray-300 placeholder-gray-600 outline-none border border-white/5 shadow-inner"
+      <textarea
+        ref={ref}
+        className="w-full min-h-[120px] overflow-hidden resize-none rounded-xl bg-[#161719] p-4 text-[15px] leading-relaxed text-gray-300 placeholder-gray-600 outline-none border border-white/5 shadow-inner"
         placeholder="The generated text will appear here"
         value={content}
-        onChange={(e) => onUpdate({ content: e.target.value })}
+        onChange={(e) => {
+          onUpdate({ content: e.target.value });
+          resize();
+        }}
       />
       
       <div className="flex items-center justify-between mt-auto">

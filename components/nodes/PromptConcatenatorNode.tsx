@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useAutoResizeTextarea } from '../../hooks/useAutoResizeTextarea';
 
 interface PromptConcatenatorNodeProps {
   prompt1?: string;
@@ -19,7 +20,10 @@ export const PromptConcatenatorNode: React.FC<PromptConcatenatorNodeProps> = ({
   onUpdate 
 }) => {
   const [manualTextValue, setManualTextValue] = useState(manualText);
-  
+  const { ref: prompt1Ref } = useAutoResizeTextarea(prompt1 || '', { minHeight: 80 });
+  const { ref: prompt2Ref } = useAutoResizeTextarea(prompt2 || '', { minHeight: 80 });
+  const { ref: manualRef, resize: resizeManual } = useAutoResizeTextarea(manualTextValue, { minHeight: 80 });
+
   // Use ref to track previous combined value to prevent unnecessary updates
   const prevCombinedRef = useRef<string>('');
 
@@ -92,8 +96,9 @@ export const PromptConcatenatorNode: React.FC<PromptConcatenatorNodeProps> = ({
         <div className="flex flex-col gap-2">
           <div className="rounded-xl bg-[#161719] border border-white/5 p-4 shadow-inner">
             <div className="text-[10px] font-medium text-gray-500 uppercase mb-1">Prompt 1</div>
-            <textarea 
-              className="w-full h-20 resize-none bg-transparent text-[14px] leading-relaxed text-gray-300 placeholder-gray-600 outline-none"
+            <textarea
+              ref={prompt1Ref}
+              className="w-full min-h-[80px] overflow-hidden resize-none bg-transparent text-[14px] leading-relaxed text-gray-300 placeholder-gray-600 outline-none"
               placeholder="Connect a prompt input"
               value={prompt1 || ''}
               readOnly
@@ -101,8 +106,9 @@ export const PromptConcatenatorNode: React.FC<PromptConcatenatorNodeProps> = ({
           </div>
           <div className="rounded-xl bg-[#161719] border border-white/5 p-4 shadow-inner">
             <div className="text-[10px] font-medium text-gray-500 uppercase mb-1">Prompt 2</div>
-            <textarea 
-              className="w-full h-20 resize-none bg-transparent text-[14px] leading-relaxed text-gray-300 placeholder-gray-600 outline-none"
+            <textarea
+              ref={prompt2Ref}
+              className="w-full min-h-[80px] overflow-hidden resize-none bg-transparent text-[14px] leading-relaxed text-gray-300 placeholder-gray-600 outline-none"
               placeholder="Connect a prompt input"
               value={prompt2 || ''}
               readOnly
@@ -118,28 +124,32 @@ export const PromptConcatenatorNode: React.FC<PromptConcatenatorNodeProps> = ({
         {/* Single Manual Text Input */}
         <div className="rounded-xl bg-[#161719] border border-white/5 p-4 shadow-inner">
           <div className="text-[10px] font-medium text-gray-500 uppercase mb-1">Text</div>
-          <textarea 
-            className="w-full h-20 resize-none bg-transparent text-[14px] leading-relaxed text-gray-300 placeholder-gray-600 outline-none"
+          <textarea
+            ref={manualRef}
+            className="w-full min-h-[80px] overflow-hidden resize-none bg-transparent text-[14px] leading-relaxed text-gray-300 placeholder-gray-600 outline-none"
             placeholder="Write additional text"
             value={manualTextValue}
-            onChange={(e) => handleManualTextChange(e.target.value)}
+            onChange={(e) => {
+              handleManualTextChange(e.target.value);
+              resizeManual();
+            }}
           />
         </div>
       </div>
 
       <div className="flex items-center justify-between mt-auto">
-        <button 
+        <button
           onClick={handleAddTextInputPort}
           className="flex items-center gap-2 text-[12px] font-medium text-gray-500 hover:text-white transition-colors px-1"
         >
-          <span className="text-lg">+</span> Add another text input
+          <span className="text-lg">+</span> Add another prompt input
         </button>
         {textInputPortCount > 0 && (
-          <button 
+          <button
             onClick={handleRemoveTextInputPort}
             className="flex items-center gap-2 text-[12px] font-medium text-gray-500 hover:text-red-400 transition-colors px-1"
           >
-            <span className="text-lg">−</span> Remove text input port
+            <span className="text-lg">−</span> Remove prompt input
           </button>
         )}
       </div>

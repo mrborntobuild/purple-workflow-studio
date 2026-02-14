@@ -259,6 +259,7 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ node, selected, onDe
         return (
           <VideoNode
             videoUrl={node.data.videoUrl}
+            thumbnailUrl={node.data.thumbnailUrl}
             content={node.data.content || ''}
             status={node.data.status}
             progress={node.data.progress}
@@ -494,24 +495,24 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ node, selected, onDe
       case 'prompt_enhancer':
         return { headerIcon: <Wand2 size={16} />, inputs: [{ label: 'TEXT', color: pink }], outputs: [{ label: 'TEXT', color: pink }] };
 
-      // Prompt combiner - accepts 2 prompts, outputs combined TEXT
+      // Prompt combiner - accepts multiple prompts, outputs combined PROMPT
       case 'prompt_concatenator': {
         const textInputPortCount = node.data.panelSettings?.textInputPortCount || 0;
         const inputs = [
           { label: 'PROMPT', color: pink },
           { label: 'PROMPT', color: pink }
         ];
-        
-        // Add dynamic TEXT input ports
+
+        // Add dynamic PROMPT input ports
         for (let i = 0; i < textInputPortCount; i++) {
-          inputs.push({ label: 'TEXT', color: pink });
+          inputs.push({ label: 'PROMPT', color: pink });
         }
-        
-        return { 
-          headerIcon: <PlusCircle size={16} />, 
-          inputs, 
-          outputs: [{ label: 'TEXT', color: pink }], 
-          inputPortPosition: 'top' as const 
+
+        return {
+          headerIcon: <PlusCircle size={16} />,
+          inputs,
+          outputs: [{ label: 'PROMPT', color: pink }],
+          inputPortPosition: 'top' as const
         };
       }
 

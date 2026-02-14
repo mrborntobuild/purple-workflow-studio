@@ -5,6 +5,7 @@ import { VideoModal } from './VideoModal';
 
 interface VideoNodeProps {
   videoUrl?: string;
+  thumbnailUrl?: string;
   content: string;
   status?: string;
   progress?: number;
@@ -37,6 +38,7 @@ const getAspectRatioValue = (ratio?: string): string => {
 
 export const VideoNode: React.FC<VideoNodeProps> = ({
   videoUrl,
+  thumbnailUrl,
   content,
   status,
   progress,
@@ -89,9 +91,10 @@ export const VideoNode: React.FC<VideoNodeProps> = ({
         >
           {videoUrl ? (
             <>
-              {/* Video thumbnail - shows first frame */}
+              {/* Video thumbnail - shows poster image or first frame */}
               <video
                 src={videoUrl}
+                poster={thumbnailUrl}
                 className="h-full w-full object-contain select-none pointer-events-none"
                 style={{ opacity: status === 'loading' ? 0.6 : 1 }}
                 muted

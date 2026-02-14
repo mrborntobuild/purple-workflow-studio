@@ -3,6 +3,7 @@ import { Info, Minus, Plus, ArrowRight, ChevronDown, Sparkles, X, Trash2, CheckC
 import { CanvasNode, NodeType, Edge } from '../types';
 import { NODE_PANEL_CONFIG, PanelFieldConfig, PanelFieldType } from './nodePanelConfig';
 import { getConnectedValuesForNode } from '../utils/connectionUtils';
+import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea';
 
 interface RightPanelProps {
   selectedNode: CanvasNode | null;
@@ -131,7 +132,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   
   // Track if prompt has been saved
   const [promptSaved, setPromptSaved] = useState(false);
-  
+
   // State for all possible field values
   const [fieldValues, setFieldValues] = useState<Record<PanelFieldType, any>>({
     prompt: '',
@@ -179,6 +180,20 @@ export const RightPanel: React.FC<RightPanelProps> = ({
     image_size: 'Match Input Image',
     runs: 1,
   });
+
+  // Auto-resize for prompt and negative_prompt textareas
+  const promptDisplayValue = useMemo(() =>
+    (connectedValues.prompt?.isConnected && connectedValues.prompt?.value != null)
+      ? String(connectedValues.prompt.value)
+      : String(fieldValues.prompt ?? ''),
+    [connectedValues.prompt?.isConnected, connectedValues.prompt?.value, fieldValues.prompt]);
+  const negativePromptDisplayValue = useMemo(() =>
+    (connectedValues.negative_prompt?.isConnected && connectedValues.negative_prompt?.value != null)
+      ? String(connectedValues.negative_prompt.value)
+      : String(fieldValues.negative_prompt ?? ''),
+    [connectedValues.negative_prompt?.isConnected, connectedValues.negative_prompt?.value, fieldValues.negative_prompt]);
+  const promptTextareaResize = useAutoResizeTextarea(promptDisplayValue, { minHeight: 80, maxHeight: 400 });
+  const negativePromptTextareaResize = useAutoResizeTextarea(negativePromptDisplayValue, { minHeight: 80, maxHeight: 400 });
 
   // Load settings from node when it changes
   useEffect(() => {
@@ -1015,9 +1030,9 @@ export const RightPanel: React.FC<RightPanelProps> = ({
         } else {
           // Text input or textarea
           const isTextarea = type === 'prompt' || type === 'negative_prompt';
-          const InputComponent = isTextarea ? 'textarea' : 'input';
           const isPromptField = type === 'prompt';
-          
+          const textareaResize = type === 'prompt' ? promptTextareaResize : type === 'negative_prompt' ? negativePromptTextareaResize : null;
+
           return (
             <div key={type} className="mb-6">
               <div className="flex items-center gap-2 mb-3">
@@ -1046,20 +1061,36 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                 <Info size={12} className="text-gray-600" />
               </div>
               <div className="relative">
-                <InputComponent
-                  type={isTextarea ? undefined : 'text'}
-                  value={value || ''}
-                  onChange={(e) => !isConnected && handleFieldChange(type, e.target.value)}
-                  placeholder={placeholder}
-                  disabled={isConnected}
-                  className={`w-full rounded-lg bg-[#1a1b1e] border border-white/5 px-3 py-2 text-sm text-gray-300 placeholder-gray-600 outline-none focus:ring-1 focus:ring-purple-500/30 ${
-                    isTextarea ? 'resize-none min-h-[80px]' : ''
-                  } ${
-                    isConnected ? 'opacity-75 cursor-not-allowed border-purple-500/30' : ''
-                  } ${
-                    isPromptField && promptSaved ? 'border-green-500/30' : ''
-                  }`}
-                />
+                {isTextarea && textareaResize ? (
+                  <textarea
+                    ref={textareaResize.ref}
+                    value={value || ''}
+                    onChange={(e) => {
+                      if (!isConnected) handleFieldChange(type, e.target.value);
+                      textareaResize.resize();
+                    }}
+                    placeholder={placeholder}
+                    disabled={isConnected}
+                    className={`w-full rounded-lg bg-[#1a1b1e] border border-white/5 px-3 py-2 text-sm text-gray-300 placeholder-gray-600 outline-none focus:ring-1 focus:ring-purple-500/30 min-h-[80px] max-h-[400px] overflow-y-auto resize-none ${
+                      isConnected ? 'opacity-75 cursor-not-allowed border-purple-500/30' : ''
+                    } ${
+                      isPromptField && promptSaved ? 'border-green-500/30' : ''
+                    }`}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={value || ''}
+                    onChange={(e) => !isConnected && handleFieldChange(type, e.target.value)}
+                    placeholder={placeholder}
+                    disabled={isConnected}
+                    className={`w-full rounded-lg bg-[#1a1b1e] border border-white/5 px-3 py-2 text-sm text-gray-300 placeholder-gray-600 outline-none focus:ring-1 focus:ring-purple-500/30 ${
+                      isConnected ? 'opacity-75 cursor-not-allowed border-purple-500/30' : ''
+                    } ${
+                      isPromptField && promptSaved ? 'border-green-500/30' : ''
+                    }`}
+                  />
+                )}
               </div>
               {isConnected && sourceNodeId && (
                 <p className="text-[10px] text-gray-500 mt-1">

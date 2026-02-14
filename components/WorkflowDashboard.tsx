@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Trash2, Clock, FileText, LogOut, Grid, List, Folder, Share2, BookOpen, MoreHorizontal, Layout, X } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Search, Plus, Trash2, Clock, FileText, LogOut, Grid, List, Folder, Share2, BookOpen, MoreHorizontal, Layout, X, Settings, User } from 'lucide-react';
 import { Workflow, WorkflowFilters } from '../services/apiService';
 import { useAuth } from './AuthProvider';
 import { useNavigate } from 'react-router-dom';
@@ -157,8 +157,22 @@ const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
     dateTo: stored.filters.dateTo ? new Date(stored.filters.dateTo) : null,
     status: stored.filters.status || 'all',
   });
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
+
+  // Close profile menu on outside click
+  useEffect(() => {
+    if (!showProfileMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showProfileMenu]);
 
   // Build filters object and notify parent
   const buildFilters = useCallback((): WorkflowFilters => {
@@ -242,8 +256,11 @@ const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
       {/* Sidebar */}
       <aside className="w-64 border-r border-white/5 flex flex-col bg-[#0e0e11]">
         {/* User Profile Dropdown */}
-        <div className="p-4 border-b border-white/5">
-          <button className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-white/5 transition-colors text-left group">
+        <div className="p-4 border-b border-white/5 relative" ref={profileMenuRef}>
+          <button
+            onClick={() => setShowProfileMenu(!showProfileMenu)}
+            className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-white/5 transition-colors text-left group"
+          >
             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-xs font-bold text-white shadow-lg">
               {user?.email?.[0].toUpperCase() || 'U'}
             </div>
@@ -253,6 +270,25 @@ const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
             </div>
             <MoreHorizontal size={16} className="text-gray-600 group-hover:text-gray-400" />
           </button>
+          {showProfileMenu && (
+            <div className="absolute left-4 right-4 top-full mt-1 z-50 rounded-xl border border-white/10 bg-[#1a1b1e] py-1 shadow-2xl">
+              <button
+                onClick={() => { setShowProfileMenu(false); navigate('/profile'); }}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/10 transition-colors"
+              >
+                <User size={15} />
+                Profile
+              </button>
+              <div className="my-1 border-t border-white/5" />
+              <button
+                onClick={() => { setShowProfileMenu(false); handleSignOut(); }}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <LogOut size={15} />
+                Sign Out
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Navigation */}

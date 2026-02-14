@@ -63,6 +63,7 @@ export interface StatusResponse {
     imageUrl?: string;
     videoUrl?: string;
     audioUrl?: string;
+    thumbnailUrl?: string;
     error?: string;
   };
   progress?: number; // 0-100
@@ -579,6 +580,7 @@ class ApiService {
     let imageUrl: string | undefined;
     let videoUrl: string | undefined;
     let audioUrl: string | undefined;
+    let thumbnailUrl: string | undefined;
 
     if (mappedStatus === 'completed' && result.output_url) {
       // Determine type based on URL or model
@@ -589,6 +591,17 @@ class ApiService {
         audioUrl = url;
       } else {
         imageUrl = url;
+      }
+    }
+
+    // Extract thumbnail URL
+    if (mappedStatus === 'completed') {
+      if (result.thumbnail_url) {
+        thumbnailUrl = result.thumbnail_url;
+      } else if (result.raw?.video?.thumbnail_url) {
+        thumbnailUrl = result.raw.video.thumbnail_url;
+      } else if (result.raw?.thumbnail?.url) {
+        thumbnailUrl = result.raw.thumbnail.url;
       }
     }
 
@@ -612,7 +625,8 @@ class ApiService {
       result: imageUrl || videoUrl || audioUrl ? {
         imageUrl,
         videoUrl,
-        audioUrl
+        audioUrl,
+        thumbnailUrl
       } : undefined,
       progress: result.progress || 0
     };

@@ -332,7 +332,8 @@ function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerO
   const prevInitialNodesRef = useRef<CanvasNode[] | undefined>(undefined);
   const prevInitialEdgesRef = useRef<Edge[] | undefined>(undefined);
   const viewportInitializedRef = useRef(false);
-  
+  const runningNodesRef = useRef<Set<string>>(new Set());
+
   // Initialize nodes/edges from props ONCE
   const initialRFNodes = useMemo(() => 
     (initialNodes || []).map(convertToRFNode), 
@@ -579,12 +580,12 @@ function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerO
         { label: 'PROMPT', color: pink },
         { label: 'PROMPT', color: pink }
       ];
-      
-      // Add dynamic TEXT input ports
+
+      // Add dynamic PROMPT input ports
       for (let i = 0; i < textInputPortCount; i++) {
-        inputs.push({ label: 'TEXT', color: pink });
+        inputs.push({ label: 'PROMPT', color: pink });
       }
-      
+
       targetConfig = { ...targetConfig, inputs };
     }
 
@@ -701,15 +702,25 @@ function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerO
   
   const runAINode = useCallback(async (id: string, promptOverride?: string) => {
     console.log('[App] runAINode called for:', id, promptOverride);
+
+    // Synchronous guard against double-clicks (React state updates are async)
+    if (runningNodesRef.current.has(id)) {
+      console.log('[App] Node is already running (ref guard), skipping:', id);
+      return;
+    }
+    runningNodesRef.current.add(id);
+
     const node = nodes.find(n => n.id === id);
     if (!node) {
       console.error('[App] Node not found:', id);
+      runningNodesRef.current.delete(id);
       return;
     }
     console.log('[App] Node found:', node.type, node.data);
-    
+
     if (node.data.status === 'loading') {
       console.log('[App] Node is already loading, skipping');
+      runningNodesRef.current.delete(id);
       return;
     }
 
@@ -719,9 +730,11 @@ function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerO
       if (node.type === 'prompt_enhancer' || node.type === 'any_llm' || node.type === 'image_describer' || node.type === 'video_describer') {
         const text = await generateAIContent(node.data.content || '');
         handleUpdateNode(id, { content: text, status: 'success' });
+        runningNodesRef.current.delete(id);
       } else if (node.type === 'image') {
         const url = await generateAIImage(node.data.content || 'A beautiful futuristic landscape');
         handleUpdateNode(id, { imageUrl: url, status: 'success' });
+        runningNodesRef.current.delete(id);
       } else if (isImageModelNode(node.type)) {
         console.log('[App] Processing Image Model Node:', node.type);
         const inputImageUrls: string[] = [];
@@ -807,10 +820,12 @@ function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerO
           onUpdate: (status) => {
             handleUpdateNode(id, {
               progress: status.progress,
-              status: status.status === 'processing' ? 'loading' as const : undefined
+              // Keep 'loading' for both pending and processing states
+              status: (status.status === 'processing' || status.status === 'pending') ? 'loading' as const : undefined
             });
           },
           onComplete: (status) => {
+            runningNodesRef.current.delete(id);
             const updateData: any = {
               status: 'success' as const,
               progress: undefined
@@ -822,6 +837,11 @@ function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerO
             }
             if (status.result?.videoUrl) {
               updateData.videoUrl = status.result.videoUrl;
+              // Add thumbnail - prefer API thumbnail, fallback to input image for I2V models
+              updateData.thumbnailUrl = status.result.thumbnailUrl
+                || (inputImageUrls.length > 0 ? inputImageUrls[0] : null)
+                || node.data.panelSettings?.imageUrl
+                || null;
             }
             if (status.result?.audioUrl) {
               updateData.audioUrl = status.result.audioUrl;
@@ -830,11 +850,13 @@ function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerO
             handleUpdateNode(id, updateData);
           },
           onError: (error) => {
+            runningNodesRef.current.delete(id);
             handleUpdateNode(id, { status: 'error' as const });
           }
         });
       }
     } catch (err) {
+      runningNodesRef.current.delete(id);
       handleUpdateNode(id, { status: 'error' });
     }
   }, [nodes, edges, handleUpdateNode]);
@@ -1051,26 +1073,11 @@ function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerO
     const flowContext = React.useContext(FlowContext);
     
     const handleUpdate = (nodeId: string, updateData: any) => {
-      setNodes((nds) => nds.map((n) => {
-        if (n.id === nodeId) {
-          if (updateData.panelSettings && n.data.panelSettings) {
-            return {
-              ...n,
-              data: {
-                ...n.data,
-                ...updateData,
-                panelSettings: {
-                  ...n.data.panelSettings,
-                  ...updateData.panelSettings
-                }
-              }
-            };
-          }
-          return { ...n, data: { ...n.data, ...updateData } };
-        }
-        return n;
-      }));
-      flowContext?.onUpdateNode(nodeId, updateData);
+      // Use only the flow context path to avoid double state updates
+      // (setNodes via useReactFlow + setRfNodes race condition)
+      if (flowContext) {
+        flowContext.onUpdateNode(nodeId, updateData);
+      }
     };
     
     const handleDelete = (nodeId: string) => {
@@ -1586,7 +1593,11 @@ export default function App() {
   const performAutoSave = useCallback(async () => {
     if (isSavingRef.current) return;
 
+    // Skip auto-save while any node is actively generating
     const nodes = canvasNodesRef.current;
+    const hasActiveGeneration = nodes.some(n => n.data.status === 'loading');
+    if (hasActiveGeneration) return;
+
     const edges = canvasEdgesRef.current;
     if (nodes.length === 0 && edges.length === 0) return;
 
@@ -1622,8 +1633,12 @@ export default function App() {
     if (currentState === lastSavedStateRef.current) return;
 
     if (canvasNodes.length > 0 || canvasEdges.length > 0) {
-      setHasUnsavedChanges(true);
-      triggerDebouncedAutoSave();
+      // Don't trigger auto-save while nodes are generating (prevents "Saving..." flicker)
+      const hasActiveGeneration = canvasNodes.some(n => n.data.status === 'loading');
+      if (!hasActiveGeneration) {
+        setHasUnsavedChanges(true);
+        triggerDebouncedAutoSave();
+      }
     }
   }, [canvasNodes, canvasEdges, workflowTitle, triggerDebouncedAutoSave]);
 
