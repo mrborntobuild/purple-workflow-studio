@@ -12,8 +12,11 @@ export const AuthLayout = ({ children, title, subtitle }: { children: React.Reac
           transition={{ duration: 0.5 }}
           className="mx-auto w-full max-w-md"
         >
-          {/* Logo Placeholder */}
-          <div className="mb-12 h-12 w-12 rounded-full bg-purple-600 shadow-[0_0_20px_rgba(147,51,234,0.5)]" />
+          {/* Logo */}
+          <div className="mb-12 flex items-center gap-3">
+            <div className="h-12 w-12 rounded-full bg-purple-600 shadow-[0_0_20px_rgba(147,51,234,0.5)]" />
+            <span className="text-xl font-bold tracking-tight text-white">Purple Studios</span>
+          </div>
           
           <div className="mb-10">
             <h1 className="text-4xl font-bold tracking-tight text-white">{title}</h1>
