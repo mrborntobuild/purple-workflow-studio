@@ -2,8 +2,9 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Search, FolderOpen,
-  CreditCard, Star, User, LogOut, Bell, ChevronDown
+  CreditCard, Star, User, LogOut, Bell, ChevronDown, Sparkles
 } from 'lucide-react';
+import { useCredits } from '../../contexts/CreditContext';
 
 const sidebarLinks = [
   { label: 'Dashboard', href: '/client-dashboard', icon: LayoutDashboard },
@@ -16,6 +17,7 @@ const sidebarLinks = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
+  const { credits } = useCredits();
 
   return (
     <div className="flex min-h-screen bg-[#050506] text-white font-sans" style={{ overflow: 'auto', height: '100vh', touchAction: 'auto' }}>
@@ -77,6 +79,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </h2>
           </div>
           <div className="flex items-center gap-4">
+            <Link to="/buy-credits" className="flex items-center gap-2 rounded-xl bg-[#1a1b1e] hover:bg-[#222326] border border-white/5 px-3.5 py-2 text-xs font-medium text-gray-400 transition-colors">
+              <Sparkles size={14} className="text-yellow-500" />
+              <span>{credits.toLocaleString()} credits</span>
+            </Link>
             <button className="relative rounded-lg p-2 text-gray-400 hover:bg-white/5 hover:text-white transition-all">
               <Bell size={18} />
               <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-purple-600 text-[10px] font-bold flex items-center justify-center">

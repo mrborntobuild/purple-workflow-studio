@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Info, Minus, Plus, ArrowRight, ChevronDown, Sparkles, X, Trash2, CheckCircle2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { CanvasNode, NodeType, Edge } from '../types';
 import { NODE_PANEL_CONFIG, PanelFieldConfig, PanelFieldType } from './nodePanelConfig';
 import { getConnectedValuesForNode } from '../utils/connectionUtils';
 import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea';
+import { useCredits } from '../contexts/CreditContext';
 
 interface RightPanelProps {
   selectedNode: CanvasNode | null;
@@ -37,9 +39,29 @@ const NODE_CATEGORIES_WITH_PANEL: NodeType[] = [
   'background_remove', 'image_to_svg', 'speech_to_text', 'whisper'
 ];
 
+// Credit costs per node type (matches backend api/stripe/_credits.ts)
+const NODE_CREDIT_COSTS: Partial<Record<NodeType, number>> = {
+  nano_banana_pro: 23, nano_banana_pro_edit: 23,
+  flux_pro_1_1_ultra: 9, flux_pro_1_1: 6, flux_dev: 4, flux_lora: 4,
+  ideogram_v3: 10, ideogram_v3_edit: 10,
+  imagen_3: 8, imagen_3_fast: 4, minimax_image: 5,
+  veo_2: 375, veo_2_i2v: 375, veo_3_1: 300,
+  kling_2_6_pro: 53, kling_2_1_pro: 72, kling_2_0_master: 75,
+  kling_1_6_pro: 72, kling_1_6_standard: 38,
+  hunyuan_video_v1_5_i2v: 60, hunyuan_video_v1_5_t2v: 60, hunyuan_video_i2v: 60,
+  luma_ray_2: 75, luma_ray_2_flash: 38,
+  minimax_hailuo: 75, minimax_director: 90, pika_2_2: 45, ltx_video: 3, wan_i2v: 38,
+  kling_lipsync_a2v: 75, kling_lipsync_t2v: 75,
+  sync_lipsync_v1: 60, sync_lipsync_v2: 60, latent_sync: 38, sad_talker: 23, tavus_hummingbird: 113,
+  topaz_video: 75, creative_upscaler: 3, esrgan: 1, thera: 3, drct: 3,
+  trellis: 3, hunyuan_3d_v2: 72, hunyuan_3d_mini: 12, hunyuan_3d_turbo: 6,
+  minimax_speech_hd: 5, minimax_speech_turbo: 3, kokoro_tts: 3, dia_tts: 6,
+  elevenlabs_tts: 8, elevenlabs_turbo: 5, mmaudio_v2: 8,
+  background_remove: 0, image_to_svg: 2, speech_to_text: 1, whisper: 1,
+};
+
 const getNodeCost = (nodeType: NodeType): number => {
-  // Default cost - can be customized per node type
-  return 5;
+  return NODE_CREDIT_COSTS[nodeType] ?? 5;
 };
 
 const getImageSizeOptions = (nodeType: NodeType): string[] => {
@@ -74,6 +96,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   onRun, 
   onUpdate 
 }) => {
+  const { credits } = useCredits();
   // Get field configuration for this node type
   const fieldConfigs = selectedNode ? NODE_PANEL_CONFIG[selectedNode.type] || [] : [];
   
@@ -1352,10 +1375,10 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       {/* Header */}
       <div className="flex h-16 items-center justify-between border-b border-white/5 px-6">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-xl bg-[#1a1b1e] px-4 py-2 text-xs font-medium text-gray-400">
+          <Link to="/buy-credits" className="flex items-center gap-2 rounded-xl bg-[#1a1b1e] hover:bg-[#222326] px-4 py-2 text-xs font-medium text-gray-400 transition-colors">
             <Sparkles size={14} className="text-yellow-500" />
-            <span>150 credits</span>
-          </div>
+            <span>{credits.toLocaleString()} credits</span>
+          </Link>
         </div>
         <button
           onClick={onClose}
@@ -1372,8 +1395,16 @@ export const RightPanel: React.FC<RightPanelProps> = ({
           <div className="flex items-center gap-2 mb-2">
             <div className="h-2 w-2 rounded-full bg-purple-500" />
             <span className="text-sm font-bold text-white">{selectedNode.data.label}</span>
-            <span className="text-xs font-medium text-gray-500">• {nodeCost} credits</span>
+            <span className={`text-xs font-medium ${nodeCost === 0 ? 'text-green-400' : 'text-gray-500'}`}>
+              • {nodeCost === 0 ? 'FREE' : `${nodeCost} credits/run`}
+            </span>
           </div>
+          {nodeCost > 0 && credits < nodeCost && (
+            <Link to="/buy-credits" className="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 mt-2 text-xs text-red-400 hover:bg-red-500/15 transition-colors">
+              <Sparkles size={12} />
+              Not enough credits — buy more to run this model
+            </Link>
+          )}
         </div>
 
         {/* Connected Images Section for Nano Banana Pro and Nano Banana Pro Edit */}

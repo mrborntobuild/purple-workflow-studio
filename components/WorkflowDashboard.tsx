@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, Plus, Trash2, Clock, FileText, LogOut, Grid, List, Folder, Share2, BookOpen, MoreHorizontal, Layout, X, Settings, User } from 'lucide-react';
+import { Search, Plus, Trash2, Clock, FileText, LogOut, Grid, List, Folder, Share2, BookOpen, MoreHorizontal, Layout, X, Settings, User, Sparkles } from 'lucide-react';
 import { Workflow, WorkflowFilters } from '../services/apiService';
 import { useAuth } from './AuthProvider';
-import { useNavigate } from 'react-router-dom';
+import { useCredits } from '../contexts/CreditContext';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SortDropdown, { SortOption, SortOrder } from './dashboard/SortDropdown';
 import FilterPanel, { FilterState } from './dashboard/FilterPanel';
@@ -146,6 +147,7 @@ const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
   onFiltersChange,
   isLoading = false
 }) => {
+  const { credits } = useCredits();
   const stored = getStoredPreferences();
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -408,6 +410,12 @@ const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
                 <button className="p-1.5 hover:bg-white/5 rounded text-gray-500 hover:text-white"><List size={16} /></button>
               </div>
             )}
+
+            {/* Credit Balance */}
+            <Link to="/buy-credits" className="flex items-center gap-2 rounded-xl bg-[#1a1b1e] hover:bg-[#222326] border border-white/5 px-4 py-2 text-xs font-medium text-gray-400 transition-colors">
+              <Sparkles size={14} className="text-yellow-500" />
+              <span>{credits.toLocaleString()} credits</span>
+            </Link>
           </div>
         </header>
 
