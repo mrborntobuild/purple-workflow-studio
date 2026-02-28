@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Save, Loader2, Sparkles, ArrowRight } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
+import { useCredits } from '../contexts/CreditContext';
 import { supabase } from '../services/supabaseClient';
 import { motion } from 'framer-motion';
 
@@ -19,6 +20,7 @@ interface UserProfile {
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { credits: liveCredits, recentTransactions } = useCredits();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -183,9 +185,46 @@ export default function ProfilePage() {
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-400">Credits remaining</span>
-              <span className="text-gray-200">{profile?.credits ?? 0} / {profile?.total_credits ?? 0}</span>
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1.5 text-gray-200">
+                  <Sparkles size={14} className="text-yellow-500" />
+                  {liveCredits.toLocaleString()}
+                </span>
+                <Link
+                  to="/buy-credits"
+                  className="flex items-center gap-1 rounded-lg bg-purple-600/10 border border-purple-500/20 px-2.5 py-1 text-xs font-bold text-purple-400 hover:bg-purple-600/20 transition-colors"
+                >
+                  Buy Credits
+                  <ArrowRight size={12} />
+                </Link>
+              </div>
             </div>
           </div>
+
+          {/* Recent Transactions */}
+          {recentTransactions.length > 0 && (
+            <div className="rounded-2xl border border-white/5 bg-[#111214] p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Recent Transactions</h2>
+                <Link to="/buy-credits" className="text-xs text-purple-400 hover:text-purple-300">View all</Link>
+              </div>
+              <div className="space-y-2">
+                {recentTransactions.slice(0, 5).map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between text-sm py-2 border-b border-white/5 last:border-0">
+                    <div>
+                      <p className="text-gray-300 text-xs">{tx.description}</p>
+                      <p className="text-gray-600 text-[10px]">
+                        {new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                    </div>
+                    <span className={`text-xs font-bold ${tx.amount > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {tx.amount > 0 ? '+' : ''}{tx.amount}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
           {error && (

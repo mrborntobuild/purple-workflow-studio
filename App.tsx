@@ -1,5 +1,6 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Search, Clock, Briefcase, Image as ImageIcon,
   Play, Box, Sparkles, HelpCircle, MessageSquare,
@@ -51,6 +52,7 @@ import { Tabs, TabsList, TabsTrigger, TabsLabel } from './components/ui/tabs';
 import { AppView } from './components/AppView';
 import { LogView } from './components/LogView';
 import { NodeDefinitionsProvider } from './contexts/NodeDefinitionsContext';
+import { useCredits } from './contexts/CreditContext';
 
 const GOOGLE_LOGO_URL = 'https://vxsjiwlvradiyluppage.supabase.co/storage/v1/object/public/logo-images/google.png';
 const KLING_LOGO_URL = 'https://vxsjiwlvradiyluppage.supabase.co/storage/v1/object/public/logo-images/kling-ai.png';
@@ -328,6 +330,8 @@ interface FlowCanvasProps {
 }
 
 function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerOpen, onSelectedNodeChange, onSelectedNodeDataChange, onNodeUpdateHandlerReady, onNodeRunHandlerReady, onDeselectNodesReady, onEdgesAndNodesReady, onViewportChange, onGroupNodesReady, onMultiSelectionChange, workflowId, cursorMode = 'pointer' }: FlowCanvasProps) {
+  const { refreshCredits } = useCredits();
+  const [creditError, setCreditError] = useState<{ required: number; available: number; model: string } | null>(null);
   // Track previous initial values to detect actual changes
   const prevInitialNodesRef = useRef<CanvasNode[] | undefined>(undefined);
   const prevInitialEdgesRef = useRef<Edge[] | undefined>(undefined);
@@ -848,6 +852,7 @@ function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerO
             }
 
             handleUpdateNode(id, updateData);
+            refreshCredits(); // Update credit display after successful run
           },
           onError: (error) => {
             runningNodesRef.current.delete(id);
@@ -855,9 +860,14 @@ function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerO
           }
         });
       }
-    } catch (err) {
+    } catch (err: any) {
       runningNodesRef.current.delete(id);
-      handleUpdateNode(id, { status: 'error' });
+      if (err?.creditError) {
+        handleUpdateNode(id, { status: 'error' as const });
+        setCreditError(err.creditError);
+      } else {
+        handleUpdateNode(id, { status: 'error' as const });
+      }
     }
   }, [nodes, edges, handleUpdateNode]);
   
@@ -1238,12 +1248,46 @@ function FlowCanvas({ initialNodes, initialEdges, initialViewport, onNodePickerO
             size={1.5}
           />
         </ReactFlow>
+
+        {/* Insufficient Credits Modal */}
+        {creditError && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setCreditError(null)}>
+            <div className="mx-4 w-full max-w-sm rounded-2xl border border-white/10 bg-[#111214] p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/10 text-red-400">
+                <Sparkles size={24} />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Insufficient Credits</h3>
+              <p className="text-sm text-gray-400 mb-1">
+                This model requires <span className="font-bold text-white">{creditError.required} credits</span>.
+              </p>
+              <p className="text-sm text-gray-400 mb-6">
+                You have <span className="font-bold text-white">{creditError.available} credits</span> remaining.
+              </p>
+              <div className="flex gap-3">
+                <Link
+                  to="/buy-credits"
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] hover:bg-purple-500 transition-all"
+                  onClick={() => setCreditError(null)}
+                >
+                  Buy Credits
+                </Link>
+                <button
+                  onClick={() => setCreditError(null)}
+                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-gray-400 hover:bg-white/10 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </FlowContext.Provider>
   );
 }
 
 export default function App() {
+  const { credits: userCredits } = useCredits();
   // View mode: 'dashboard' or 'canvas'
   const [viewMode, setViewMode] = useState<'dashboard' | 'canvas'>('dashboard');
   
@@ -1869,7 +1913,7 @@ export default function App() {
           <div className="px-6 mb-6">
             <div className="flex items-center gap-3 mb-8">
               <div className="h-8 w-8 rounded-full bg-purple-600 shadow-[0_0_15px_rgba(147,51,234,0.4)] transition-all hover:scale-110" />
-              <span className="text-sm font-bold tracking-tight text-white">{workflowTitle}</span>
+              <span className="text-sm font-bold tracking-tight text-white">Purple Studios</span>
             </div>
             
             <div className="relative">
@@ -2020,10 +2064,10 @@ export default function App() {
 
         <header className={`absolute left-[280px] top-0 z-10 flex h-16 items-center justify-end px-8 pointer-events-none transition-all right-0 ${editorMode !== 'workflow' ? 'hidden' : ''}`}>
           <div className="flex items-center gap-3 pointer-events-auto">
-            <div className="flex items-center gap-2 rounded-xl bg-[#1a1b1e] px-4 py-2 text-xs font-medium text-gray-400">
+            <Link to="/buy-credits" className="flex items-center gap-2 rounded-xl bg-[#1a1b1e] hover:bg-[#222326] px-4 py-2 text-xs font-medium text-gray-400 transition-colors cursor-pointer">
               <Sparkles size={14} className="text-yellow-500" />
-              <span>150 credits</span>
-            </div>
+              <span>{userCredits.toLocaleString()} credits</span>
+            </Link>
             <button className="flex items-center gap-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 px-4 py-2 text-xs font-bold text-white transition-colors">
               <Share2 size={16} />
               Share
@@ -2185,6 +2229,7 @@ export default function App() {
           />
         )}
       </div>
+
     </ReactFlowProvider>
     </NodeDefinitionsProvider>
   );

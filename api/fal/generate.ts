@@ -1,4 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { getModelCreditCost } from '../stripe/_credits';
+import { supabaseAdmin, getUserIdFromRequest } from '../stripe/_helpers';
 
 // Model mapping from frontend node types to FAL.ai model IDs
 // Synced with server.cjs for consistency between local and production
@@ -90,7 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   // Handle preflight request
   if (req.method === 'OPTIONS') {
@@ -127,6 +129,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (hasImage && T2V_TO_I2V_MAP[falModel]) {
       console.log(`[FAL Generate] Image detected, switching from ${falModel} to ${T2V_TO_I2V_MAP[falModel]}`);
       falModel = T2V_TO_I2V_MAP[falModel];
+    }
+
+    // --- Credit check & deduction ---
+    const userId = await getUserIdFromRequest(req.headers.authorization);
+    const creditCost = getModelCreditCost(falModel);
+
+    if (userId && creditCost > 0) {
+      // Check current balance
+      const { data: user, error: fetchErr } = await supabaseAdmin
+        .from('users')
+        .select('credits')
+        .eq('id', userId)
+        .single();
+
+      if (fetchErr || !user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const currentCredits = user.credits || 0;
+      if (currentCredits < creditCost) {
+        return res.status(402).json({
+          error: 'Insufficient credits',
+          required: creditCost,
+          available: currentCredits,
+          model: falModel,
+        });
+      }
+
+      // Atomic deduction: WHERE credits >= cost prevents race conditions
+      const newBalance = currentCredits - creditCost;
+      const { error: deductErr, count } = await supabaseAdmin
+        .from('users')
+        .update({ credits: newBalance })
+        .eq('id', userId)
+        .gte('credits', creditCost);
+
+      if (deductErr) {
+        console.error('[FAL Generate] Credit deduction error:', deductErr);
+        return res.status(500).json({ error: 'Failed to process credits' });
+      }
+
+      // Record transaction
+      await supabaseAdmin.from('credit_transactions').insert({
+        user_id: userId,
+        amount: -creditCost,
+        balance_after: newBalance,
+        type: 'usage',
+        description: `${falModel} run`,
+        fal_model: falModel,
+      });
+
+      console.log(`[FAL Generate] Deducted ${creditCost} credits from user ${userId}. Balance: ${newBalance}`);
     }
 
     console.log(`[FAL Generate] Model: ${falModel}, Input:`, JSON.stringify(input).slice(0, 200));

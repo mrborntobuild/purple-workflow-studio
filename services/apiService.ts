@@ -517,13 +517,26 @@ class ApiService {
 
     console.log('[ApiService] Calling /api/fal/generate with:', apiRequestBody);
 
+    // Get auth token for credit deduction
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+
     const response = await fetch(`${this.baseUrl}/fal/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(apiRequestBody)
     });
-    
+
     if (!response.ok) {
+      if (response.status === 402) {
+        const errorData = await response.json();
+        const err = new Error('Insufficient credits') as Error & { creditError?: { required: number; available: number; model: string } };
+        err.creditError = { required: errorData.required, available: errorData.available, model: errorData.model };
+        throw err;
+      }
       const errorText = await response.text();
       throw new Error(`Failed to start generation: ${response.status} ${errorText}`);
     }
